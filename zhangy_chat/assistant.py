@@ -52,9 +52,27 @@ class Assistant:
 
 想好吃啥了吗？"""
             },
+            # 命令类
+            "命令": {
+                "keywords": ["python main", "pip install", "npm install", "git ", "cmd", "终端", "命令行"],
+                "response": """## 命令行帮助
+
+**常见命令**:
+- `python main.py` - 运行 Python 程序
+- `pip install 包名` - 安装 Python 依赖
+- `git clone 地址` - 克隆代码仓库
+- `git status` - 查看 git 状态
+
+**遇到问题**:
+- 权限错误：用管理员身份运行
+- 找不到命令：检查是否安装/配置环境变量
+- 报错：看错误信息最后一行
+
+具体遇到啥命令问题了？"""
+            },
             # 编程类
             "编程": {
-                "keywords": ["编程", "代码", "python", "java", "写程序", "开发", "bug", "报错"],
+                "keywords": ["编程", "代码", "python 学习", "java 学习", "写程序", "开发", "bug", "报错", "程序员"],
                 "response": """## 编程建议
 
 **学习路线**:
