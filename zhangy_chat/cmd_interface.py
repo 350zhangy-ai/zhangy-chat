@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-CMD 命令行界面模块（R3 版本）
-新增：内存配置、心情设置、预设管理指令
+CMD 命令行界面模块（R4 深度智能版）
+新增：逻辑推理指令、情感管理指令
 """
 
 import sys
@@ -17,32 +17,32 @@ from .preset_manager import PresetManager
 
 
 class CMDInterface:
-    """CMD 命令行界面"""
+    """CMD 命令行界面 (R4)"""
 
     def __init__(self):
         self.task_manager = TaskManager()
         self.data_manager = DataManager()
-        
-        # R3 新增管理器
+
+        # R3 管理器
         self.memory_manager = MemoryManager()
         self.mood_manager = MoodManager()
         self.preset_manager = PresetManager()
-        
+
         # 初始化助手并注入管理器
         self.assistant = Assistant(
             mood_manager=self.mood_manager,
             preset_manager=self.preset_manager
         )
-        
+
         self.running = True
 
     def run(self):
         """运行 CMD 界面"""
         print("=" * 50)
-        print("  Zhangy Chat R3 - CMD 模式")
+        print("  Zhangy Chat R4 - 深度智能版")
         print("  输入 /help 查看指令，/gui 切换图形界面，exit 退出")
         print("=" * 50)
-        
+
         # 显示当前配置
         self._show_status()
 
@@ -55,7 +55,7 @@ class CMDInterface:
                 if cmd.startswith('/'):
                     self._handle_command(cmd)
                 else:
-                    # 普通对话，交给 AI 助手
+                    # 普通对话，交给 AI 助手（含情感识别和逻辑推理）
                     response = self.assistant.chat(cmd)
                     print(response)
 
@@ -77,6 +77,7 @@ class CMDInterface:
         print(f"  内存：{mem_info['selected']}GiB (实际：{mem_info['actual']}GiB)")
         print(f"  心情：{mood_info['icon']} {mood_info['name']}")
         print(f"  预设：{preset_info.get('icon', '📁')} {preset_info.get('name', '未知')}")
+        print(f"  情感强度：{self.assistant.emotion_engine.emotion_intensity_level}")
 
     def _handle_command(self, cmd: str):
         """处理指令"""
@@ -100,11 +101,14 @@ class CMDInterface:
             '/gui': self._cmd_gui,
             '/exit': self._cmd_exit,
             '/quit': self._cmd_exit,
-            # R3 新增指令
+            # R3 指令
             '/mem': self._cmd_mem,
             '/mood': self._cmd_mood,
             '/preset': self._cmd_preset,
-            '/status': self._cmd_status
+            '/status': self._cmd_status,
+            # R4 新增指令
+            '/logic': self._cmd_logic,
+            '/emotion': self._cmd_emotion
         }
 
         handler = commands.get(command)
@@ -121,18 +125,18 @@ class CMDInterface:
   任务管理:
     /add <标题> [描述]           添加任务
     /del <ID>                   删除任务
-    /list [状态]                查看任务 (状态：pending/completed/all)
+    /list [状态]                查看任务
     /mark <ID> <状态>           标记任务状态
 
   目标规划:
     /goal add <标题> [描述]      添加目标
     /goal list                  查看目标
     /goal milestone <ID> <内容>  添加里程碑
-    /review [天数]              生成复盘报告 (默认 7 天)
+    /review [天数]              生成复盘报告
     /progress <ID>              查看目标进度
 
   习惯打卡:
-    /habit add <名称> [频率]     添加习惯 (频率：daily/weekly)
+    /habit add <名称> [频率]     添加习惯
     /habit list                 查看习惯
     /habit check <ID>           打卡
 
@@ -141,11 +145,17 @@ class CMDInterface:
     /restore <名称>             恢复备份
     /export <格式>              导出数据 (txt/excel/csv)
 
-  R3 新增:
+  R3 配置:
     /mem [8/16/32/64]           设置内存配置
-    /mood [焦虑/高效/轻松/平静/疲惫]  设置心情
-    /preset [办公/备考/陪伴/疏导]    切换预设
+    /mood [心情]                设置心情
+    /preset [预设]              切换预设
     /status                     查看当前状态
+
+  R4 新增:
+    /logic <问题>               逻辑推理模式解答问题
+    /emotion check              查看情感状态
+    /emotion clear              清除情感记忆
+    /emotion level [弱/中/强]   设置情感强度
 
   其他:
     /gui                        切换至图形界面
@@ -153,6 +163,52 @@ class CMDInterface:
 """
         print(help_text)
 
+    # R4 新增指令
+    def _cmd_logic(self, args: str):
+        """逻辑推理指令"""
+        if not args:
+            print("用法：/logic <问题>")
+            print("示例：/logic 为什么加班越久效率越低")
+            print("      /logic 为什么坚持很难")
+            return
+        
+        response = self.assistant.logic_chat(args)
+        print(response)
+
+    def _cmd_emotion(self, args: str):
+        """情感管理指令"""
+        if not args:
+            print("用法：/emotion <子指令>")
+            print("子指令:")
+            print("  check  - 查看情感状态")
+            print("  clear  - 清除情感记忆")
+            print("  level [弱/中/强] - 设置情感强度")
+            return
+        
+        parts = args.split(maxsplit=1)
+        subcmd = parts[0].lower()
+        subargs = parts[1] if len(parts) > 1 else ""
+        
+        if subcmd == "check":
+            summary = self.assistant.get_emotion_status()
+            print(summary)
+        
+        elif subcmd == "clear":
+            msg = self.assistant.clear_emotion_memory()
+            print(msg)
+        
+        elif subcmd == "level":
+            level_map = {"弱": "weak", "中": "medium", "强": "strong"}
+            level = level_map.get(subargs, subargs.lower())
+            if self.assistant.set_emotion_intensity(level):
+                print(f"✓ 情感强度已设置为 {subargs or level}")
+            else:
+                print("用法：/emotion level [弱/中/强]")
+        
+        else:
+            print(f"未知子指令：{subcmd}")
+
+    # R3 指令保持不变
     def _cmd_mem(self, args: str):
         """内存配置指令"""
         if not args:
@@ -171,15 +227,14 @@ class CMDInterface:
             
             if result['success']:
                 print(f"✓ {result['message']}")
-                print(f"  缓存大小：{result['config']['cache_size']}MB")
-                print(f"  最大并发：{result['config']['max_concurrent']}")
+                print(f"  缓存：{result['config']['cache_size']}MB")
+                print(f"  并发：{result['config']['max_concurrent']}")
             else:
                 print(f"⚠ {result['message']}")
                 if 'current' in result:
                     print(f"  当前已降级为：{result['current']}GiB")
         except ValueError:
             print("用法：/mem [8/16/32/64]")
-            print("示例：/mem 16")
 
     def _cmd_mood(self, args: str):
         """心情设置指令"""
@@ -201,7 +256,6 @@ class CMDInterface:
             '疲惫': 'tired', '休息': 'tired'
         }
         
-        # 支持中文和英文键
         mood_key = args.strip().lower()
         if mood_key in mood_map:
             mood_key = mood_map[mood_key]
@@ -240,7 +294,6 @@ class CMDInterface:
             if len(parts) < 2:
                 print("用法：/preset add <预设名称>")
                 return
-            # 简化自定义预设创建（使用默认配置）
             name = parts[1]
             result = self.preset_manager.add_custom_preset(
                 name=name,
@@ -264,7 +317,6 @@ class CMDInterface:
                 print(f"⚠ {result['message']}")
         
         else:
-            # 切换预设
             preset_key = subcmd
             if preset_key in preset_map:
                 preset_key = preset_map[preset_key]
@@ -272,8 +324,6 @@ class CMDInterface:
             result = self.preset_manager.set_preset(preset_key)
             if result['success']:
                 print(f"✓ {result['message']}")
-                if result.get('is_custom'):
-                    print("  [自定义预设已加载]")
             else:
                 print(f"⚠ {result['message']}")
 
@@ -281,29 +331,23 @@ class CMDInterface:
         """查看状态指令"""
         self._show_status()
 
-    # 以下为原有指令，保持不变
+    # 原有任务、目标、习惯、数据管理指令保持不变
     def _cmd_add_task(self, args: str):
         """添加任务"""
         if not args:
             print("用法：/add <任务标题> [任务描述]")
             return
-
         parts = args.split(maxsplit=1)
         title = parts[0]
         description = parts[1] if len(parts) > 1 else ""
-
         task = self.task_manager.add_task(title, description)
         print(f"✓ 任务已添加 [ID: {task.id}]")
-        print(f"  标题：{task.title}")
-        if description:
-            print(f"  描述：{description}")
 
     def _cmd_del_task(self, args: str):
         """删除任务"""
         if not args:
             print("用法：/del <任务 ID>")
             return
-
         if self.task_manager.delete_task(args.strip()):
             print(f"✓ 任务 {args.strip()} 已删除")
         else:
@@ -312,20 +356,17 @@ class CMDInterface:
     def _cmd_list_tasks(self, args: str):
         """列出任务"""
         status = args.strip() if args.strip() else "pending"
-
         if status == "all":
             tasks = self.task_manager.get_tasks()
         else:
             tasks = self.task_manager.get_tasks(status=status)
-
         if not tasks:
             print("暂无任务")
             return
-
         print(f"{'ID':<10} {'标题':<20} {'状态':<10} {'优先级':<6}")
         print("-" * 50)
         for task in tasks:
-            status_map = {"pending": "待完成", "completed": "已完成",
+            status_map = {"pending": "待完成", "completed": "已完成", 
                          "in_progress": "进行中", "cancelled": "已取消"}
             print(f"{task.id:<10} {task.title[:20]:<20} {status_map.get(task.status, '未知'):<10} {task.priority:<6}")
 
@@ -334,9 +375,7 @@ class CMDInterface:
         parts = args.split()
         if len(parts) < 2:
             print("用法：/mark <任务 ID> <状态>")
-            print("状态：pending/in_progress/completed/cancelled")
             return
-
         task_id, status = parts[0], parts[1]
         if self.task_manager.update_task_status(task_id, status):
             print(f"✓ 任务 {task_id} 状态已更新为 {status}")
@@ -350,10 +389,8 @@ class CMDInterface:
             print("      /goal list")
             print("      /goal milestone <ID> <内容>")
             return
-
         parts = args.split(maxsplit=2)
         subcmd = parts[0].lower()
-
         if subcmd == "add":
             if len(parts) < 2:
                 print("用法：/goal add <目标标题> [描述]")
@@ -362,7 +399,6 @@ class CMDInterface:
             desc = parts[2] if len(parts) > 2 else ""
             goal = self.task_manager.add_goal(title, desc)
             print(f"✓ 目标已添加 [ID: {goal.id}]")
-
         elif subcmd == "list":
             goals = self.task_manager.get_goals()
             if not goals:
@@ -373,7 +409,6 @@ class CMDInterface:
             for goal in goals:
                 progress = goal.get_progress()
                 print(f"{goal.id:<10} {goal.title[:20]:<20} {goal.status:<10} {progress:.0f}%")
-
         elif subcmd == "milestone":
             if len(parts) < 3:
                 print("用法：/goal milestone <目标 ID> <里程碑内容>")
@@ -384,28 +419,19 @@ class CMDInterface:
             else:
                 print(f"未找到目标：{goal_id}")
 
-        else:
-            print(f"未知子指令：{subcmd}")
-
     def _cmd_review(self, args: str):
         """生成复盘报告"""
         days = int(args.strip()) if args.strip() else 7
         review = self.task_manager.generate_review(days)
-
         print(f"\n{'='*40}")
         print(f"  复盘报告：{review['period']}")
         print(f"{'='*40}\n")
-
         print(f"✅ 完成任务：{review['completed_tasks']} 个")
         for task in review['task_details'][:5]:
             print(f"   - {task['title']}")
-        if len(review['task_details']) > 5:
-            print(f"   ... 还有 {len(review['task_details']) - 5} 个")
-
         print(f"\n🎯 进行中目标：{review['active_goals']} 个")
         for goal in review['goal_progress']:
             print(f"   - {goal['title']}: {goal['progress']:.0f}%")
-
         print(f"\n📊 习惯打卡:")
         for habit in review['habits_summary']:
             print(f"   - {habit['title']}: 连续{habit['streak']}天，总计{habit['total']}次")
@@ -415,7 +441,6 @@ class CMDInterface:
         if not args:
             print("用法：/progress <目标 ID>")
             return
-
         progress = self.task_manager.get_goal_progress(args.strip())
         if progress is not None:
             print(f"目标进度：{progress:.1f}%")
@@ -429,10 +454,8 @@ class CMDInterface:
             print("      /habit list")
             print("      /habit check <ID>")
             return
-
         parts = args.split(maxsplit=2)
         subcmd = parts[0].lower()
-
         if subcmd == "add":
             if len(parts) < 2:
                 print("用法：/habit add <习惯名称> [频率]")
@@ -441,7 +464,6 @@ class CMDInterface:
             freq = parts[2] if len(parts) > 2 else "daily"
             habit = self.task_manager.add_habit(name, freq)
             print(f"✓ 习惯已添加 [ID: {habit.id}]")
-
         elif subcmd == "list":
             habits = self.task_manager.get_habits()
             if not habits:
@@ -451,7 +473,6 @@ class CMDInterface:
             print("-" * 60)
             for habit in habits:
                 print(f"{habit.id:<10} {habit.title[:20]:<20} {habit.frequency:<10} {habit.streak:<8} {habit.total_completions:<8}")
-
         elif subcmd == "check":
             if len(parts) < 2:
                 print("用法：/habit check <习惯 ID>")
@@ -460,9 +481,6 @@ class CMDInterface:
                 print("✓ 打卡成功")
             else:
                 print("打卡失败（可能已打卡或 ID 不存在）")
-
-        else:
-            print(f"未知子指令：{subcmd}")
 
     def _cmd_backup(self, args: str):
         """备份数据"""
@@ -478,7 +496,6 @@ class CMDInterface:
             for b in self.data_manager.list_backups():
                 print(f"  - {b['backup_name']} ({b['created_at']})")
             return
-
         if self.data_manager.restore_backup(args.strip()):
             print(f"✓ 备份 {args.strip()} 已恢复")
         else:
@@ -490,10 +507,9 @@ class CMDInterface:
             print("用法：/export <格式>")
             print("格式：txt / excel / csv")
             return
-
         fmt = args.strip().lower()
-        timestamp = __import__('datetime').datetime.now().strftime("%Y%m%d_%H%M%S")
-
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         try:
             if fmt == "txt":
                 path = self.data_manager.export_to_txt(f"export_{timestamp}.txt")
@@ -523,7 +539,7 @@ class CMDInterface:
 
 def main():
     """主函数"""
-    parser = argparse.ArgumentParser(description="Zhangy Chat R3 - CMD 模式")
+    parser = argparse.ArgumentParser(description="Zhangy Chat R4 - CMD 模式")
     parser.add_argument('-cmd', action='store_true', help='启动 CMD 模式')
     args = parser.parse_args()
 
