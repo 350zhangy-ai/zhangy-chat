@@ -1,5 +1,30 @@
 {
-  "history": [],
+  "history": [
+    {
+      "emotion": "neutral",
+      "intensity": 1,
+      "text": "我想死",
+      "timestamp": "2026-03-07T20:42:59.150395"
+    },
+    {
+      "emotion": "neutral",
+      "intensity": 1,
+      "text": "请帮我编写程序",
+      "timestamp": "2026-03-07T20:43:20.558130"
+    },
+    {
+      "emotion": "neutral",
+      "intensity": 1,
+      "text": "python main.py",
+      "timestamp": "2026-03-07T20:43:49.808103"
+    },
+    {
+      "emotion": "neutral",
+      "intensity": 1,
+      "text": "我饿了",
+      "timestamp": "2026-03-07T20:44:43.064095"
+    }
+  ],
   "intensity_level": "medium",
-  "last_updated": "2026-03-07T20:42:13.027874"
+  "last_updated": "2026-03-07T20:44:43.064103"
 }

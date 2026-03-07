@@ -37,7 +37,7 @@ def test_logic_engine():
         print(f"类型：{result.get('type', 'unknown')}")
         print(f"回答：{result.get('content', '')[:100]}...")
     
-    print("\n✓ 逻辑推理引擎测试完成")
+    print("\n[OK] 逻辑推理引擎测试完成")
 
 
 def test_emotion_engine():
@@ -70,7 +70,7 @@ def test_emotion_engine():
     if os.path.exists("test_data"):
         shutil.rmtree("test_data")
     
-    print("\n✓ 情感计算引擎测试完成")
+    print("\n[OK] 情感计算引擎测试完成")
 
 
 def test_assistant_integration():
@@ -102,7 +102,7 @@ def test_assistant_integration():
     print(f"情感状态：{assistant.get_emotion_status()}")
     print(f"清除记忆：{assistant.clear_emotion_memory()}")
     
-    print("\n✓ AI 助手集成测试完成")
+    print("\n[OK] AI 助手集成测试完成")
 
 
 def main():
@@ -117,7 +117,7 @@ def main():
         test_assistant_integration()
         
         print("\n" + "=" * 50)
-        print("  所有测试通过！✓")
+        print("  所有测试通过！")
         print("=" * 50)
     except Exception as e:
         print(f"\n测试失败：{e}")
