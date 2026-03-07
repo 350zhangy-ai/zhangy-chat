@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-zhangy chat - 图形界面版本 (R2 双界面版)
+zhangy chat - 图形界面版本 (R3 版本)
+新增：内存配置、心情选择、预设管理
 """
 
 import tkinter as tk
@@ -18,26 +19,37 @@ from datetime import datetime
 from zhangy_chat.task_manager import TaskManager
 from zhangy_chat.data_manager import DataManager
 from zhangy_chat.assistant import Assistant
+from zhangy_chat.memory_manager import MemoryManager
+from zhangy_chat.mood_manager import MoodManager
+from zhangy_chat.preset_manager import PresetManager
 
 
 class ZhangyChatGUI:
-    """zhangy chat 图形界面类"""
+    """zhangy chat 图形界面类 (R3)"""
 
     def __init__(self, root):
         """初始化 GUI"""
         self.root = root
-        self.root.title("zhangy chat - 专业 AI 助手")
-        self.root.geometry("1000x700")
-        self.root.minsize(800, 600)
+        self.root.title("zhangy chat R3 - 专业 AI 助手")
+        self.root.geometry("1100x750")
+        self.root.minsize(900, 650)
 
         # 加载配置
         self.config = self._load_config()
         self.name = self.config.get('name', 'zhangy chat')
         
-        # 初始化核心模块
+        # 初始化核心模块（R3 新增）
         self.task_manager = TaskManager()
         self.data_manager = DataManager()
-        self.assistant = Assistant(self.config)
+        self.memory_manager = MemoryManager()
+        self.mood_manager = MoodManager()
+        self.preset_manager = PresetManager()
+        
+        # 初始化助手并注入管理器
+        self.assistant = Assistant(
+            mood_manager=self.mood_manager,
+            preset_manager=self.preset_manager
+        )
         
         # 当前标签页
         self.current_tab = "chat"
@@ -65,7 +77,7 @@ class ZhangyChatGUI:
 
         title_label = tk.Label(
             title_frame,
-            text=f"  {self.name}  R2",
+            text=f"  {self.name}  R3",
             font=("Microsoft YaHei", 16, "bold"),
             bg="#2c3e50",
             fg="white"
@@ -128,6 +140,31 @@ class ZhangyChatGUI:
         """创建聊天标签页"""
         chat_frame = tk.Frame(self.notebook, bg="#ecf0f1")
         self.notebook.add(chat_frame, text="💬 对话")
+        
+        # R3 新增：心情选择区
+        mood_frame = tk.LabelFrame(chat_frame, text="💚 当前心情", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
+        mood_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        self.mood_buttons = {}
+        mood_layout = tk.Frame(mood_frame, bg="#ecf0f1")
+        mood_layout.pack(padx=10, pady=10)
+        
+        for key, info in self.mood_manager.get_all_moods().items():
+            btn = tk.Button(
+                mood_layout,
+                text=f"{info['icon']} {info['name']}",
+                command=lambda k=key: self._select_mood(k),
+                font=("Microsoft YaHei", 9),
+                bg="white",
+                fg="#2c3e50",
+                relief=tk.RAISED,
+                padx=10,
+                pady=5
+            )
+            btn.pack(side=tk.LEFT, padx=5)
+            self.mood_buttons[key] = btn
+        
+        self._update_mood_buttons()
         
         # 聊天记录显示区域
         self.chat_display = scrolledtext.ScrolledText(
@@ -368,9 +405,57 @@ class ZhangyChatGUI:
         tk.Button(op_frame, text="删除", command=self._delete_habit, bg="#e74c3c", fg="white").pack(side=tk.LEFT, padx=2)
 
     def _create_settings_tab(self):
-        """创建设置标签页"""
+        """创建设置标签页（R3 更新）"""
         settings_frame = tk.Frame(self.notebook, bg="#ecf0f1")
         self.notebook.add(settings_frame, text="⚙️ 设置")
+        
+        # R3 新增：系统配置区
+        sys_frame = tk.LabelFrame(settings_frame, text="🔧 系统配置 (R3)", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
+        sys_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        # 内存配置
+        mem_frame = tk.Frame(sys_frame, bg="#ecf0f1")
+        mem_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        tk.Label(mem_frame, text="内存配置:", bg="#ecf0f1", font=("Microsoft YaHei", 10)).grid(row=0, column=0, padx=10, pady=10, sticky=tk.W)
+        self.mem_var = tk.StringVar(value=str(self.memory_manager.selected_memory))
+        mem_combo = ttk.Combobox(
+            mem_frame, 
+            textvariable=self.mem_var, 
+            values=["8", "16", "32", "64"], 
+            width=10, 
+            font=("Microsoft YaHei", 10),
+            state="readonly"
+        )
+        mem_combo.grid(row=0, column=1, padx=5, pady=10)
+        mem_combo.bind("<<ComboboxSelected>>", lambda e: self._set_memory())
+        
+        tk.Label(mem_frame, text="GiB", bg="#ecf0f1", font=("Microsoft YaHei", 10)).grid(row=0, column=2, padx=5, pady=10, sticky=tk.W)
+        
+        # 预设选择
+        preset_frame = tk.Frame(sys_frame, bg="#ecf0f1")
+        preset_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        tk.Label(preset_frame, text="场景预设:", bg="#ecf0f1", font=("Microsoft YaHei", 10)).grid(row=0, column=0, padx=10, pady=10, sticky=tk.W)
+        
+        self.preset_var = tk.StringVar(value=self.preset_manager.get_current_preset())
+        preset_choices = [
+            ("office", "💼 高效办公"),
+            ("exam", "📚 备考冲刺"),
+            ("casual", "🍵 休闲陪伴"),
+            ("emotional", "💚 情绪疏导")
+        ]
+        for i, (key, label) in enumerate(preset_choices):
+            rb = tk.Radiobutton(
+                preset_frame,
+                text=label,
+                variable=self.preset_var,
+                value=key,
+                bg="#ecf0f1",
+                font=("Microsoft YaHei", 10),
+                command=lambda k=key: self._set_preset(k)
+            )
+            rb.grid(row=0, column=i+1, padx=10, pady=10, sticky=tk.W)
         
         # 数据管理区
         data_frame = tk.LabelFrame(settings_frame, text="数据管理", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
@@ -415,17 +500,17 @@ class ZhangyChatGUI:
         about_frame.pack(fill=tk.X, padx=10, pady=10)
         
         about_text = """
-Zhangy Chat R2 - 高效、专业的本地 AI 助手
+Zhangy Chat R3 - 高效、专业的本地 AI 助手
 
-版本：2.0.0
+版本：3.0.0
 作者：zhangy
 协议：MIT License
 
-功能特点:
-• 双界面切换 (GUI + CMD)
-• 任务管理、目标规划、习惯打卡
-• 情绪疏导、内容辅助
-• 数据备份与导出
+R3 新功能:
+• 8/16/32/64GiB 内存配置
+• 5 种心情标签选择
+• 4 类场景预设切换
+• 双界面无缝切换
 """
         tk.Label(about_frame, text=about_text, bg="#ecf0f1", justify=tk.LEFT, font=("Microsoft YaHei", 9)).pack(padx=10, pady=10)
 
@@ -434,9 +519,11 @@ Zhangy Chat R2 - 高效、专业的本地 AI 助手
         self._refresh_task_list()
         self._refresh_goal_list()
         self._refresh_habit_list()
+        self._update_mood_buttons()
+        self._update_preset_display()
         
         # 显示欢迎消息
-        self._add_message("系统", f"欢迎使用 {self.name}！我是你的专属 AI 助手，有任何问题都可以问我。", "#27ae60")
+        self._add_message("系统", f"欢迎使用 {self.name} R3！我是你的专属 AI 助手，有任何问题都可以问我。", "#27ae60")
 
     def _switch_to_cmd(self):
         """切换到 CMD 模式"""
@@ -483,7 +570,58 @@ Zhangy Chat R2 - 高效、专业的本地 AI 助手
         self.chat_display.delete("1.0", tk.END)
         self.chat_display.config(state=tk.DISABLED)
 
-    # 任务相关方法
+    # R3 新增方法
+    def _select_mood(self, mood_key):
+        """选择心情"""
+        result = self.mood_manager.set_mood(mood_key)
+        if result['success']:
+            self._update_mood_buttons()
+            self._update_tip()
+            messagebox.showinfo("心情切换", result['message'])
+        else:
+            messagebox.showwarning("提示", result['message'])
+    
+    def _update_mood_buttons(self):
+        """更新心情按钮状态"""
+        current = self.mood_manager.get_current_mood()
+        for key, btn in self.mood_buttons.items():
+            if key == current:
+                btn.config(bg="#3498db", fg="white", relief=tk.SUNKEN)
+            else:
+                btn.config(bg="white", fg="#2c3e50", relief=tk.RAISED)
+    
+    def _set_memory(self):
+        """设置内存配置"""
+        try:
+            mem_gib = int(self.mem_var.get())
+            result = self.memory_manager.set_memory(mem_gib)
+            if result['success']:
+                messagebox.showinfo("内存配置", f"{result['message']}\n缓存：{result['config']['cache_size']}MB\n并发：{result['config']['max_concurrent']}")
+            else:
+                messagebox.showwarning("内存配置", result['message'])
+        except ValueError:
+            messagebox.showerror("错误", "无效的内存配置")
+    
+    def _set_preset(self, preset_key):
+        """设置预设"""
+        result = self.preset_manager.set_preset(preset_key)
+        if result['success']:
+            self._update_preset_display()
+            self._update_tip()
+            messagebox.showinfo("预设切换", result['message'])
+        else:
+            messagebox.showwarning("预设切换", result['message'])
+    
+    def _update_preset_display(self):
+        """更新预设显示"""
+        current = self.preset_manager.get_current_preset()
+        self.preset_var.set(current)
+    
+    def _update_tip(self):
+        """更新每日小贴士"""
+        self.tip_label.config(text=self.assistant.get_daily_tip())
+
+    # 任务相关方法（保持原有）
     def _add_task(self):
         """添加任务"""
         title = self.task_title.get().strip()
@@ -642,7 +780,6 @@ Zhangy Chat R2 - 高效、专业的本地 AI 助手
         item = self.habit_tree.item(selected[0])
         habit_name = item["values"][0]
         
-        # 根据名称查找习惯 ID
         for habit in self.task_manager.get_habits():
             if habit.title == habit_name:
                 if self.task_manager.habit_check_in(habit.id):
@@ -691,13 +828,11 @@ Zhangy Chat R2 - 高效、专业的本地 AI 助手
 
     def _apply_settings(self):
         """应用设置"""
-        # 主题设置
         if self.theme_var.get() == "dark":
             self.root.configure(bg="#2c3e50")
         else:
             self.root.configure(bg="#ecf0f1")
         
-        # 字体大小
         font_size = int(self.font_size.get())
         self.chat_display.config(font=("Microsoft YaHei", font_size))
         

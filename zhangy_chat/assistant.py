@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-AI 助手核心模块 - 问答、情绪疏导、内容辅助
+AI 助手核心模块 - 问答、情绪疏导、内容辅助（R3 版本）
+支持心情适配、预设联动
 """
 
 import random
@@ -11,13 +12,20 @@ from datetime import datetime
 
 class Assistant:
     """AI 助手类"""
-    
-    def __init__(self, config: Optional[Dict] = None):
+
+    def __init__(self, config: Optional[Dict] = None, 
+                 mood_manager=None, preset_manager=None):
         self.config = config or {}
         self.name = self.config.get('personality', {}).get('name', 'zhangy')
         self.style = self.config.get('personality', {}).get('说话风格', [])
         
-        # 情绪疏导话术库
+        # 心情管理器（可选）
+        self.mood_manager = mood_manager
+        
+        # 预设管理器（可选）
+        self.preset_manager = preset_manager
+
+        # 情绪疏导话术库（基础版）
         self.emotional_responses = {
             "anxiety": [
                 "我理解你现在的感受。焦虑是正常的情绪反应，让我们一起深呼吸，慢慢分析问题。",
@@ -40,7 +48,7 @@ class Assistant:
                 "我理解这种被压得喘不过气的感觉。让我们先暂停，重新规划一下。"
             ]
         }
-        
+
         # 内容辅助模板
         self.content_templates = {
             "polish": "## 润色建议\n\n**原文**: {text}\n\n**优化后**:\n{polished}\n\n**修改说明**:\n{notes}",
@@ -48,31 +56,70 @@ class Assistant:
             "outline": "## 大纲建议\n\n{outline}"
         }
     
+    def _get_mood_prefix(self) -> str:
+        """获取心情前缀"""
+        if self.mood_manager:
+            return self.mood_manager.get_response_prefix()
+        return ""
+    
+    def _get_mood_suffix(self) -> str:
+        """获取心情后缀"""
+        if self.mood_manager:
+            return self.mood_manager.get_response_suffix()
+        return ""
+    
+    def _apply_mood_style(self, response: str) -> str:
+        """应用心情风格到回复"""
+        if not self.mood_manager:
+            return response
+        
+        prefix = self._get_mood_prefix()
+        suffix = self._get_mood_suffix()
+        
+        # 如果是效率模式，精简回复
+        if self.mood_manager.is_efficiency_mode():
+            # 移除冗余内容
+            response = response.split('\n\n---\n')[0]
+        
+        # 组装回复
+        parts = []
+        if prefix:
+            parts.append(prefix)
+        parts.append(response)
+        if suffix:
+            parts.append(suffix)
+        
+        return "\n\n".join(parts)
+
     def chat(self, query: str) -> str:
         """通用对话"""
         # 检测情绪关键词
         emotion = self._detect_emotion(query)
-        
+
         if emotion:
-            return self._emotional_response(emotion, query)
-        
+            response = self._emotional_response(emotion, query)
+            return self._apply_mood_style(response)
+
         # 检测功能类型
         if self._is_task_related(query):
-            return self._task_response(query)
-        
+            response = self._task_response(query)
+            return self._apply_mood_style(response)
+
         if self._is_content_help(query):
-            return self._content_help(query)
-        
+            response = self._content_help(query)
+            return self._apply_mood_style(response)
+
         # 默认问答
-        return self._qa_response(query)
-    
+        response = self._qa_response(query)
+        return self._apply_mood_style(response)
+
     def _detect_emotion(self, text: str) -> Optional[str]:
         """检测情绪"""
         anxiety_words = ['焦虑', '担心', '害怕', '紧张', '不安', '慌']
         frustrated_words = ['沮丧', '挫败', '失望', '灰心', '郁闷', '烦']
         tired_words = ['累', '疲惫', '疲倦', '困', '辛苦', '乏力']
         overwhelmed_words = ['压力大', '喘不过气', '太多事', '应付不来', '崩溃']
-        
+
         if any(w in text for w in anxiety_words):
             return "anxiety"
         if any(w in text for w in frustrated_words):
@@ -82,11 +129,20 @@ class Assistant:
         if any(w in text for w in overwhelmed_words):
             return "overwhelmed"
         return None
-    
+
     def _emotional_response(self, emotion: str, query: str) -> str:
         """情绪疏导回复"""
         responses = self.emotional_responses.get(emotion, [])
         base_response = random.choice(responses) if responses else "我理解你的感受，想和我多聊聊吗？"
+        
+        # 如果心情管理器处于共情模式，增强共情回复
+        if self.mood_manager and self.mood_manager.is_empathetic_mode():
+            return f"""## {self.name} 想说
+
+{base_response}
+
+我在这里陪着你，有什么想说的都可以告诉我。
+"""
         
         return f"""## {self.name} 想说
 
@@ -95,15 +151,27 @@ class Assistant:
 ---
 *如果你需要具体建议，可以告诉我更多细节*
 """
-    
+
     def _is_task_related(self, query: str) -> bool:
         """判断是否与任务相关"""
         task_keywords = ['任务', '待办', '计划', '安排', '提醒', '目标', '习惯']
         return any(k in query for k in task_keywords)
-    
+
     def _task_response(self, query: str) -> str:
         """任务相关回复"""
-        return f"""## 任务建议
+        # 根据预设调整回复
+        if self.preset_manager and self.preset_manager.is_focus_mode():
+            return """## 任务建议
+
+1. **明确优先级**: 区分重要紧急程度
+2. **拆解大任务**: 分解为小步骤
+3. **设置截止时间**: 合理期限
+4. **定期复盘**: 回顾调整
+
+使用 `/add` 添加任务，`/review` 生成复盘。
+"""
+        
+        return """## 任务建议
 
 关于任务管理，建议如下：
 
@@ -115,12 +183,12 @@ class Assistant:
 ---
 *你可以使用 /add 指令添加任务，/review 生成复盘报告*
 """
-    
+
     def _is_content_help(self, query: str) -> bool:
         """判断是否需要内容辅助"""
         content_keywords = ['润色', '修改', '优化', '总结', '摘要', '大纲', '整理']
         return any(k in query for k in content_keywords)
-    
+
     def _content_help(self, query: str) -> str:
         """内容辅助回复"""
         if '润色' in query or '修改' in query or '优化' in query:
@@ -129,9 +197,9 @@ class Assistant:
             return self._summary_help(query)
         if '大纲' in query:
             return self._outline_help(query)
-        
+
         return "我可以帮你润色内容、生成摘要、制定大纲等。请提供具体内容或说明需求。"
-    
+
     def _polish_help(self, query: str) -> str:
         """润色帮助"""
         return """## 内容润色
@@ -146,7 +214,7 @@ class Assistant:
 ---
 *请直接发送需要润色的内容*
 """
-    
+
     def _summary_help(self, query: str) -> str:
         """摘要帮助"""
         return """## 内容摘要
@@ -160,7 +228,7 @@ class Assistant:
 ---
 *请直接发送需要总结的内容*
 """
-    
+
     def _outline_help(self, query: str) -> str:
         """大纲帮助"""
         return """## 大纲制定
@@ -175,9 +243,24 @@ class Assistant:
 ---
 *请说明主题和用途*
 """
-    
+
     def _qa_response(self, query: str) -> str:
         """默认问答回复"""
+        # 根据预设调整回复风格
+        if self.preset_manager and self.preset_manager.is_focus_mode():
+            return f"""## {self.name} 分析
+
+**问题**: {query}
+
+### 解决方案
+1. **诊断分析**: 识别关键因素
+2. **执行方案**: 具体可操作步骤
+3. **验证方法**: 确保有效性
+
+### 实施建议
+请根据上述方案执行，如需进一步协助，请提供更多细节。
+"""
+        
         return f"""## {self.name} 分析
 
 **问题**: {query}
@@ -197,7 +280,7 @@ class Assistant:
 ---
 *{self.name} - 理性温柔，高效陪伴*
 """
-    
+
     def get_daily_tip(self) -> str:
         """获取每日小贴士"""
         tips = [
@@ -210,4 +293,23 @@ class Assistant:
             "适当的运动可以提升心情和效率。"
         ]
         day = datetime.now().weekday()
-        return tips[day % len(tips)]
+        base_tip = tips[day % len(tips)]
+        
+        # 根据心情调整小贴士
+        if self.mood_manager:
+            if self.mood_manager.is_empathetic_mode():
+                return f"💚 {base_tip} 记得，你已经很好了。"
+            elif self.mood_manager.is_efficiency_mode():
+                return f"🎯 {base_tip} 保持专注，继续前进。"
+            elif self.mood_manager.is_casual_mode():
+                return f"😊 {base_tip} 享受当下～"
+        
+        return f"📌 {base_tip}"
+    
+    def set_mood_manager(self, mood_manager):
+        """设置心情管理器"""
+        self.mood_manager = mood_manager
+    
+    def set_preset_manager(self, preset_manager):
+        """设置预设管理器"""
+        self.preset_manager = preset_manager
