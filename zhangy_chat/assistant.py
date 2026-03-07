@@ -8,6 +8,7 @@ AI 助手核心模块 - R4 实用版
 from typing import Optional, Dict
 from .logic_engine import LogicEngine
 from .emotion_engine import EmotionEngine
+from .reasoning_engine import ReasoningEngine
 
 
 class Assistant:
@@ -27,6 +28,7 @@ class Assistant:
         # 引擎
         self.logic_engine = LogicEngine()
         self.emotion_engine = EmotionEngine()
+        self.reasoning_engine = ReasoningEngine()  # R5 新增推理引擎
         
         # 超大全实用回复库 - 覆盖生活各方面
         self.practical_responses = {
@@ -533,6 +535,12 @@ class Assistant:
         """纯逻辑推理模式"""
         result = self.logic_engine.analyze(query)
         return result.get("content", "这个问题我需要更多信息才能分析。")
+    
+    # R5 深度推理模式（参考 DeepSeek-R1 理念）
+    def deep_reasoning(self, query: str) -> str:
+        """深度推理模式 - 分步推理 + 自我检查"""
+        result = self.reasoning_engine.reason(query)
+        return self.reasoning_engine.format_reasoning(result)
     
     # 情感管理
     def get_emotion_status(self) -> str:

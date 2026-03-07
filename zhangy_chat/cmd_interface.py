@@ -108,7 +108,9 @@ class CMDInterface:
             '/status': self._cmd_status,
             # R4 新增指令
             '/logic': self._cmd_logic,
-            '/emotion': self._cmd_emotion
+            '/emotion': self._cmd_emotion,
+            # R5 新增指令
+            '/reason': self._cmd_reason
         }
 
         handler = commands.get(command)
@@ -157,6 +159,9 @@ class CMDInterface:
     /emotion clear              清除情感记忆
     /emotion level [弱/中/强]   设置情感强度
 
+  R5 新增:
+    /reason <问题>              深度推理模式（分步推理 + 自我检查）
+
   其他:
     /gui                        切换至图形界面
     /exit                       退出程序
@@ -173,6 +178,21 @@ class CMDInterface:
             return
         
         response = self.assistant.logic_chat(args)
+        print(response)
+
+    def _cmd_reason(self, args: str):
+        """深度推理指令（参考 DeepSeek-R1）"""
+        if not args:
+            print("用法：/reason <问题>")
+            print("示例：/reason 要不要辞职")
+            print("      /reason 如何选择合适的城市")
+            print("\n深度推理模式会：")
+            print("1. 分步推理问题")
+            print("2. 自我检查推理过程")
+            print("3. 给出结论和建议")
+            return
+        
+        response = self.assistant.deep_reasoning(args)
         print(response)
 
     def _cmd_emotion(self, args: str):
