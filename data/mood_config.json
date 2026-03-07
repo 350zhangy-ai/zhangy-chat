@@ -1,0 +1,10 @@
+{
+  "current_mood": "calm",
+  "mood_history": [
+    {
+      "mood": "calm",
+      "timestamp": "2026-03-07T20:18:53.351963",
+      "previous": "calm"
+    }
+  ]
+}

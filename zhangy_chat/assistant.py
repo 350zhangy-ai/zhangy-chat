@@ -246,6 +246,23 @@ class Assistant:
 
     def _qa_response(self, query: str) -> str:
         """默认问答回复"""
+        
+        # 简单对话直接回答，不要格式化
+        simple_queries = {
+            "你叫什么": f"我叫 {self.name}，是你的专属 AI 助手～",
+            "你是谁": f"我是 {self.name}，一个本地 AI 助手，可以帮你管理任务、规划目标、聊天解闷～",
+            "你好": "你好呀！有什么我可以帮你的吗？",
+            "早上好": "早上好！今天也要加油哦～",
+            "晚上好": "晚上好！忙了一天辛苦啦，记得早点休息～",
+            "谢谢": "不客气～有其他问题随时找我！",
+            "再见": "再见！有需要随时叫我～"
+        }
+        
+        # 检查是否是简单对话
+        for key, response in simple_queries.items():
+            if key in query:
+                return self._apply_mood_style(response)
+        
         # 根据预设调整回复风格
         if self.preset_manager and self.preset_manager.is_focus_mode():
             return f"""## {self.name} 分析
