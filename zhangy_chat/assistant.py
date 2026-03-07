@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 AI 助手核心模块 - 问答、情绪疏导、内容辅助（R3 版本）
-支持心情适配、预设联动
+支持心情适配、预设联动、实用回复
 """
 
 import random
@@ -24,6 +24,147 @@ class Assistant:
         
         # 预设管理器（可选）
         self.preset_manager = preset_manager
+
+        # 实用回复库 - 针对常见问题给出具体答案
+        self.practical_responses = {
+            "视频": {
+                "keywords": ["视频", "剪辑", "拍摄"],
+                "response": """## 📹 视频制作建议
+
+**快速上手方案**:
+
+1. **手机拍摄**
+   - 横屏拍摄（16:9）适合 YouTube/B 站
+   - 竖屏拍摄（9:16）适合抖音/快手
+   - 保持稳定，可用三脚架
+
+2. **剪辑软件推荐**
+   - 新手：剪映（手机/电脑版）- 免费、模板多
+   - 进阶：Premiere Pro - 专业功能全
+   - 免费替代：DaVinci Resolve - 调色强大
+
+3. **内容结构**
+   - 开头 3 秒抓住注意力
+   - 中间内容有价值/有趣
+   - 结尾引导点赞关注
+
+**需要我帮你规划具体视频内容吗？**"""
+            },
+            "学习": {
+                "keywords": ["学习", "考试", "复习", "备考"],
+                "response": """## 📚 学习计划建议
+
+**高效学习法**:
+
+1. **番茄工作法**
+   - 专注 25 分钟 + 休息 5 分钟
+   - 4 个番茄后休息 15-30 分钟
+
+2. **费曼学习法**
+   - 选择概念 → 尝试讲解 → 发现盲点 → 重新学习
+
+3. **复习节奏**
+   - 当天复习（24 小时内）
+   - 第 3 天复习
+   - 第 7 天复习
+   - 第 14 天复习
+
+**需要我帮你制定具体学习计划吗？**"""
+            },
+            "工作": {
+                "keywords": ["工作", "上班", "职场", "同事"],
+                "response": """## 💼 工作效率建议
+
+**提升效率方法**:
+
+1. **任务优先级**
+   - 紧急且重要 → 立即做
+   - 重要不紧急 → 安排时间做
+   - 紧急不重要 → 委托别人
+   - 不紧急不重要 → 可以不做
+
+2. **沟通技巧**
+   - 邮件：主题清晰、内容简洁、行动明确
+   - 会议：提前准备议程、控制时间、记录结论
+   - 汇报：结论先行、数据支撑、方案备选
+
+3. **时间管理**
+   - 早上处理最难的任务
+   - 下午处理常规工作
+   - 批量处理邮件和消息
+
+**有具体工作问题可以详细说说～**"""
+            },
+            "健康": {
+                "keywords": ["健康", "运动", "减肥", "健身", "生病"],
+                "response": """## 💚 健康建议
+
+**日常保健**:
+
+1. **运动建议**
+   - 每周 150 分钟中等强度运动
+   - 力量训练 2-3 次/周
+   - 日常多走动，少久坐
+
+2. **饮食建议**
+   - 多吃蔬菜水果
+   - 控制糖分摄入
+   - 每天喝足够的水（1.5-2L）
+
+3. **睡眠建议**
+   - 保证 7-8 小时睡眠
+   - 固定作息时间
+   - 睡前 1 小时不用电子设备
+
+*注：如有身体不适，请及时就医*"""
+            },
+            "旅行": {
+                "keywords": ["旅行", "旅游", "出去玩", "景点"],
+                "response": """## ✈️ 旅行规划建议
+
+**出行准备**:
+
+1. **目的地选择**
+   - 确定预算和时间
+   - 查天气和最佳季节
+   - 了解当地文化和禁忌
+
+2. **行程规划**
+   - 不要排太满，留休息时间
+   - 景点按区域分组，减少路途
+   - 备选方案应对突发情况
+
+3. **必备物品**
+   - 证件：身份证/护照
+   - 电子：充电器、转换插头
+   - 药品：感冒药、肠胃药、创可贴
+
+**想去哪里玩？我可以帮你细化行程～**"""
+            },
+            "购物": {
+                "keywords": ["购物", "买", "推荐", "好物"],
+                "response": """## 🛒 购物建议
+
+**理性消费原则**:
+
+1. **购买前三问**
+   - 我真的需要吗？
+   - 使用频率会高吗？
+   - 有替代品吗？
+
+2. **比价技巧**
+   - 多平台对比价格
+   - 关注促销节点（618、双 11）
+   - 查看历史价格（用价格追踪工具）
+
+3. **避坑指南**
+   - 看差评而非好评
+   - 注意退换货政策
+   - 警惕"限时抢购"套路
+
+**具体想买什么？可以帮你分析～**"""
+            }
+        }
 
         # 情绪疏导话术库（基础版）
         self.emotional_responses = {
@@ -93,14 +234,23 @@ class Assistant:
 
     def chat(self, query: str) -> str:
         """通用对话"""
-        # 检测情绪关键词
+        # 1. 先检查简单对话
+        simple_response = self._check_simple_query(query)
+        if simple_response:
+            return self._apply_mood_style(simple_response)
+        
+        # 2. 检测情绪关键词
         emotion = self._detect_emotion(query)
-
         if emotion:
             response = self._emotional_response(emotion, query)
             return self._apply_mood_style(response)
 
-        # 检测功能类型
+        # 3. 检查实用回复库
+        practical_response = self._check_practical_query(query)
+        if practical_response:
+            return self._apply_mood_style(practical_response)
+
+        # 4. 检查功能类型
         if self._is_task_related(query):
             response = self._task_response(query)
             return self._apply_mood_style(response)
@@ -109,9 +259,41 @@ class Assistant:
             response = self._content_help(query)
             return self._apply_mood_style(response)
 
-        # 默认问答
+        # 5. 默认问答
         response = self._qa_response(query)
         return self._apply_mood_style(response)
+    
+    def _check_simple_query(self, query: str) -> Optional[str]:
+        """检查简单对话"""
+        simple_queries = {
+            "你叫什么": f"我叫 {self.name}，是你的专属 AI 助手～",
+            "你是谁": f"我是 {self.name}，一个本地 AI 助手，可以帮你管理任务、规划目标、聊天解闷～",
+            "你好": "你好呀！有什么我可以帮你的吗？",
+            "早上好": "早上好！今天也要加油哦～",
+            "中午好": "中午好！吃饭了吗？记得休息一下～",
+            "晚上好": "晚上好！忙了一天辛苦啦，记得早点休息～",
+            "谢谢": "不客气～有其他问题随时找我！",
+            "再见": "再见！有需要随时叫我～",
+            "在吗": "在的在的～有什么可以帮你的？",
+            "帮个忙": "没问题，说吧，什么事？",
+            "无聊": "无聊的话，可以看看书、运动一下，或者跟我聊聊天呀～",
+            "开心": "开心就好！保持好心情～",
+            "难过": "怎么了？想聊聊吗？我在这里陪着你。"
+        }
+        
+        for key, response in simple_queries.items():
+            if key in query:
+                return response
+        
+        return None
+    
+    def _check_practical_query(self, query: str) -> Optional[str]:
+        """检查实用回复库"""
+        for category, data in self.practical_responses.items():
+            for keyword in data["keywords"]:
+                if keyword in query:
+                    return data["response"]
+        return None
 
     def _detect_emotion(self, text: str) -> Optional[str]:
         """检测情绪"""
@@ -246,56 +428,32 @@ class Assistant:
 
     def _qa_response(self, query: str) -> str:
         """默认问答回复"""
-        
-        # 简单对话直接回答，不要格式化
-        simple_queries = {
-            "你叫什么": f"我叫 {self.name}，是你的专属 AI 助手～",
-            "你是谁": f"我是 {self.name}，一个本地 AI 助手，可以帮你管理任务、规划目标、聊天解闷～",
-            "你好": "你好呀！有什么我可以帮你的吗？",
-            "早上好": "早上好！今天也要加油哦～",
-            "晚上好": "晚上好！忙了一天辛苦啦，记得早点休息～",
-            "谢谢": "不客气～有其他问题随时找我！",
-            "再见": "再见！有需要随时叫我～"
-        }
-        
-        # 检查是否是简单对话
-        for key, response in simple_queries.items():
-            if key in query:
-                return self._apply_mood_style(response)
-        
-        # 根据预设调整回复风格
-        if self.preset_manager and self.preset_manager.is_focus_mode():
-            return f"""## {self.name} 分析
+        # 如果问题太短，尝试给出通用建议
+        if len(query) < 5:
+            return f"""## {self.name} 的分析
 
-**问题**: {query}
+你问的是「{query}」，能再多说点细节吗？
 
-### 解决方案
-1. **诊断分析**: 识别关键因素
-2. **执行方案**: 具体可操作步骤
-3. **验证方法**: 确保有效性
+比如：
+- 具体是什么场景？
+- 遇到了什么问题？
+- 想要达到什么目的？
 
-### 实施建议
-请根据上述方案执行，如需进一步协助，请提供更多细节。
+这样我能给你更有针对性的建议～
 """
         
         return f"""## {self.name} 分析
 
 **问题**: {query}
 
-### 解决方案
+这个问题涉及到一些具体情况，我需要更多信息才能给出有针对性的建议。
 
-针对您的问题，建议如下：
+**可以告诉我更多细节吗？**
+- 具体是什么场景？
+- 遇到了什么困难？
+- 已经尝试过哪些方法？
 
-1. **诊断分析**: 识别问题的关键因素
-2. **执行方案**: 提供具体可操作的步骤
-3. **验证方法**: 确保方案有效性
-
-### 实施建议
-
-请根据上述方案执行，如需进一步协助，请提供更多细节。
-
----
-*{self.name} - 理性温柔，高效陪伴*
+了解得越详细，我的建议会越实用～
 """
 
     def get_daily_tip(self) -> str:
