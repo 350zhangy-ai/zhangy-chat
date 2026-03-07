@@ -1,6 +1,25 @@
-torch>=2.0.0
-transformers>=4.30.0
-accelerate>=0.20.0
-fastapi>=0.100.0
-uvicorn>=0.22.0
+# Core dependencies
 pyyaml>=6.0
+
+# GUI dependencies
+# tkinter is built-in with Python, no need to install
+
+# Excel export support
+openpyxl>=3.0.0
+
+# Optional: AI model dependencies (if using local AI)
+# torch>=2.0.0
+# transformers>=4.30.0
+# accelerate>=0.20.0
+
+# Optional: Web API dependencies
+# fastapi>=0.100.0
+# uvicorn>=0.22.0
+
+# Development dependencies
+# pytest>=7.0.0
+# black>=22.0.0
+# flake8>=4.0.0
+
+# Build dependencies
+pyinstaller>=5.0.0
