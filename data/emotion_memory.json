@@ -23,8 +23,14 @@
       "intensity": 1,
       "text": "我饿了",
       "timestamp": "2026-03-07T20:44:43.064095"
+    },
+    {
+      "emotion": "neutral",
+      "intensity": 1,
+      "text": "hi",
+      "timestamp": "2026-03-07T20:47:31.281055"
     }
   ],
   "intensity_level": "medium",
-  "last_updated": "2026-03-07T20:44:43.064103"
+  "last_updated": "2026-03-07T20:47:31.281067"
 }
