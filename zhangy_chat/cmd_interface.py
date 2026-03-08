@@ -40,11 +40,18 @@ class CMDInterface:
         """运行 CMD 界面"""
         self._print_header()
         self._show_status()
+        
+        # 测试输入
+        print("\n[DEBUG] CMD 界面已启动，等待输入...")
 
         while self.running:
             try:
+                print("[DEBUG] 等待用户输入...", flush=True)
                 user_input = input("\n┌─ zhangy-chat\n└─> ").strip()
+                print(f"[DEBUG] 收到输入：{repr(user_input)}", flush=True)
+                
                 if not user_input:
+                    print("[DEBUG] 输入为空，继续等待")
                     continue
 
                 # 检查退出命令
@@ -62,11 +69,13 @@ class CMDInterface:
                     self._handle_command(user_input)
                 else:
                     # 普通对话
+                    print("[DEBUG] 处理对话...", flush=True)
                     response = self.assistant.chat(user_input)
                     self._print_response(response)
 
-            except EOFError:
-                print("\n\n检测到输入结束，再见！")
+            except EOFError as e:
+                print(f"\n[DEBUG] EOFError: {e}")
+                print("检测到输入结束，再见！")
                 self.running = False
                 break
             except KeyboardInterrupt:
@@ -74,7 +83,7 @@ class CMDInterface:
                 self.running = False
                 break
             except Exception as e:
-                print(f"\n错误：{e}")
+                print(f"\n[DEBUG] Exception: {type(e).__name__}: {e}")
                 import traceback
                 traceback.print_exc()
                 print("\n继续运行...")
