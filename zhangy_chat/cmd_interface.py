@@ -52,7 +52,7 @@ class CMDInterface:
                     print("\n再见！")
                     self.running = False
                     break
-                    
+
                 # 检查 GUI 切换命令
                 if user_input.lower() == '/gui':
                     self._cmd_gui('')
@@ -65,12 +65,19 @@ class CMDInterface:
                     response = self.assistant.chat(user_input)
                     self._print_response(response)
 
+            except EOFError:
+                print("\n\n检测到输入结束，再见！")
+                self.running = False
+                break
             except KeyboardInterrupt:
                 print("\n\n再见！")
                 self.running = False
                 break
             except Exception as e:
-                print(f"错误：{e}")
+                print(f"\n错误：{e}")
+                import traceback
+                traceback.print_exc()
+                print("\n继续运行...")
 
     def _print_header(self):
         """打印头部"""
