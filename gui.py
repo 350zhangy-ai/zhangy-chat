@@ -305,6 +305,44 @@ class ZhangyChatGUI:
 
         self._update_mood_buttons()
 
+        # ==================== 深度思考开关 ====================
+        think_frame = tk.LabelFrame(
+            chat_frame,
+            text="🧠 深度思考",
+            font=("Microsoft YaHei", 9, "bold"),
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            bd=1
+        )
+        think_frame.pack(fill=tk.X, padx=15, pady=10)
+
+        # 深度思考开关变量
+        self.deep_thinking_var = tk.BooleanVar(value=False)
+
+        # 深度思考开关按钮
+        self.deep_thinking_btn = tk.Checkbutton(
+            think_frame,
+            text="启用深度思考模式（适合复杂问题、决策分析）",
+            variable=self.deep_thinking_var,
+            font=("Microsoft YaHei", 9),
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY,
+            selectcolor=Colors.PRIMARY_LIGHT,
+            activebackground=Colors.BG_MAIN,
+            activeforeground=Colors.PRIMARY
+        )
+        self.deep_thinking_btn.pack(padx=15, pady=8, anchor=tk.W)
+
+        # 说明文字
+        tk.Label(
+            think_frame,
+            text="提示：深度思考会分析问题的多个维度（时间/决策/情绪/资源/人际），适合分析复杂问题",
+            font=("Microsoft YaHei", 8),
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_HINT
+        ).pack(padx=15, pady=(0, 8), anchor=tk.W)
+
         # ==================== 聊天显示区 ====================
         chat_container = tk.Frame(chat_frame, bg=Colors.BG_CHAT)
         chat_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
@@ -754,13 +792,19 @@ R3 新功能:
 
         self.input_text.delete("1.0", tk.END)
         self._add_message("user", user_input, Colors.USER_BG)
-        self.status_label.config(text="⏳ 正在思考...")
+        
+        # 检查是否启用深度思考
+        deep_thinking = self.deep_thinking_var.get()
+        if deep_thinking:
+            self.status_label.config(text="🧠 深度思考中...")
+        else:
+            self.status_label.config(text="⏳ 正在思考...")
 
-        thread = threading.Thread(target=self._process_response, args=(user_input,))
+        thread = threading.Thread(target=self._process_response, args=(user_input, deep_thinking))
         thread.daemon = True
         thread.start()
 
-    def _process_response(self, user_input):
+    def _process_response(self, user_input, deep_thinking=False):
         """处理响应"""
         try:
             # 如果启用了外部 AI，优先使用外部 AI
@@ -769,9 +813,9 @@ R3 新功能:
                 if response:
                     self.root.after(0, lambda: self._add_message("ai", f"[{AI_PROVIDERS.get(self.external_ai.provider, '外部 AI')}] {response}", Colors.AI_TEXT))
                     return
-            
-            # 使用本地 AI 助手
-            response = self.assistant.chat(user_input)
+
+            # 使用本地 AI 助手（支持深度思考）
+            response = self.assistant.chat(user_input, deep_thinking=deep_thinking)
             # 移除 "zhangy-chat:" 前缀（如果有）
             if response.startswith("zhangy-chat:"):
                 response = response.replace("zhangy-chat:", "").strip()
