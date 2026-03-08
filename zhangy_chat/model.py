@@ -86,56 +86,10 @@ class ZhangyChatModel:
     
     def generate(self, text: str, max_length: int = 512) -> str:
         """生成回复"""
-        if self.model is None or self.tokenizer is None:
-            return None
-            
-        try:
-            import torch
-            
-            # 准备输入
-            messages = [{"role": "user", "content": text}]
-            prompt = self.tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=True
-            )
-            
-            # 编码
-            input_ids = self.tokenizer.encode(
-                prompt,
-                return_tensors="pt"
-            ).to(self.device)
-            
-            # 生成
-            with torch.no_grad():
-                output_ids = self.model.generate(
-                    input_ids,
-                    max_new_tokens=max_length,
-                    temperature=0.7,
-                    do_sample=True
-                )
-            
-            # 解码
-            response = self.tokenizer.decode(
-                output_ids[0],
-                skip_special_tokens=True
-            )
-            
-            # 移除 prompt 部分
-            if prompt in response:
-                response = response.split(prompt)[-1].strip()
-            
-            # 检查是否是乱码（中文字符应该占一定比例）
-            chinese_chars = sum(1 for c in response if '\u4e00' <= c <= '\u9fff')
-            if len(response) > 10 and chinese_chars / len(response) < 0.3:
-                print("[zhangy-chat] 模型输出质量不佳，使用知识库模式")
-                return None
-            
-            return response
-            
-        except Exception as e:
-            print(f"[zhangy-chat] 生成失败：{e}")
-            return None
+        # 由于缺少官方 tokenizer，模型推理输出为乱码
+        # 直接返回 None，使用知识库模式
+        print("[zhangy-chat] 模型推理已禁用（缺少官方 tokenizer），使用知识库模式")
+        return None
     
     def download_model(self, repo: str = "jingyaogong/minimind"):
         """从 HuggingFace 下载模型"""
