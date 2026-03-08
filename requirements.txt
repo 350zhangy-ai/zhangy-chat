@@ -15,3 +15,4 @@ pyinstaller>=5.0.0
 transformers>=4.37.0
 accelerate>=0.25.0
 torch>=2.0.0
+modelscope>=1.9.0  # 国内镜像下载

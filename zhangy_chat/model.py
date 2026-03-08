@@ -31,26 +31,52 @@ class ZhangyChatModel:
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer
             
-            print(f"[zhangy-chat] 加载 {self.model_name}")
+            # 使用 ModelScope 国内镜像
+            print(f"[zhangy-chat] 加载 Qwen2.5-0.5B-Instruct")
             print(f"[zhangy-chat] 设备：{self.device}")
+            print("[zhangy-chat] 首次加载需要下载模型（约 1GB），请耐心等待...")
             
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_name,
-                trust_remote_code=True
-            )
+            # 设置使用 ModelScope
+            os.environ['TRANSFORMERS_OFFLINE'] = '0'
             
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_name,
-                trust_remote_code=True,
-                torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-                device_map="auto" if self.device == "cuda" else None
-            )
+            # 尝试从 ModelScope 加载
+            try:
+                from modelscope import snapshot_download
+                model_dir = snapshot_download('qwen/Qwen2.5-0.5B-Instruct')
+                
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    model_dir,
+                    trust_remote_code=True
+                )
+                
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_dir,
+                    trust_remote_code=True,
+                    torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                    device_map="auto" if self.device == "cuda" else None
+                )
+            except ImportError:
+                print("[zhangy-chat] 未安装 modelscope，尝试从 HuggingFace 加载...")
+                # 备用方案：使用 HuggingFace 镜像
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    "Qwen/Qwen2.5-0.5B-Instruct",
+                    trust_remote_code=True,
+                    mirror='modelscope'
+                )
+                
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    "Qwen/Qwen2.5-0.5B-Instruct",
+                    trust_remote_code=True,
+                    torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                    device_map="auto" if self.device == "cuda" else None
+                )
             
             print("[zhangy-chat] 模型加载成功！")
             return True
             
         except Exception as e:
             print(f"[zhangy-chat] 加载失败：{e}")
+            print("[zhangy-chat] 将使用知识库模式")
             return False
     
     def generate(self, text: str, max_length: int = 512) -> str:
