@@ -11,6 +11,7 @@ openpyxl>=3.0.0
 # Build dependencies
 pyinstaller>=5.0.0
 
-# Model dependencies (optional, for MiniMind integration)
+# Model dependencies (Qwen2.5)
+transformers>=4.37.0
+accelerate>=0.25.0
 torch>=2.0.0
-huggingface_hub>=0.20.0
