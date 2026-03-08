@@ -36,7 +36,9 @@ class ZhangyChatModel:
                 "full_sft_768.pth",
                 "full_sft_512.pth", 
                 "grpo_768.pth",
-                "model.pth"
+                "model.pth",
+                "pytorch_model.bin",
+                "model.safetensors"
             ]
             
             model_path = None
@@ -59,18 +61,23 @@ class ZhangyChatModel:
                     )
                     print("[zhangy-chat] HuggingFace Tokenizer 已加载")
                     
-                    # 加载模型
-                    from .minimind_model import load_model
-                    self.model = load_model(model_path, self.device)
-                    
-                    if self.model:
-                        print("[zhangy-chat] 模型已加载")
-                        print("[zhangy-chat] 但由于模型权重与 tokenizer 可能不匹配，将使用知识库模式")
-                        print("[zhangy-chat] 如需使用模型推理，请确保模型权重与 tokenizer 来自同一版本")
-                        self.model = None  # 禁用模型推理
-                        return False
-                    else:
-                        print("[zhangy-chat] 模型加载失败")
+                    # 加载模型 - 使用 MiniMind 原生方式
+                    try:
+                        # 尝试使用 MiniMind 原生加载
+                        from .minimind_model import load_model as load_minimind
+                        self.model = load_minimind(model_path, self.device)
+                        
+                        if self.model:
+                            print("[zhangy-chat] MiniMind 模型加载成功！")
+                            print("[zhangy-chat] 模型已就绪，可以开始对话！")
+                            return True
+                        else:
+                            print("[zhangy-chat] MiniMind 模型加载失败")
+                            return False
+                            
+                    except Exception as e:
+                        print(f"[zhangy-chat] MiniMind 模型加载失败：{e}")
+                        print("[zhangy-chat] 将使用知识库模式")
                         return False
                         
                 except Exception as e:
@@ -89,10 +96,71 @@ class ZhangyChatModel:
     
     def generate(self, text: str, max_length: int = 512) -> str:
         """生成回复"""
-        # 由于模型权重与 tokenizer 可能不匹配，推理输出可能为乱码
-        # 直接返回 None，使用知识库模式
-        print("[zhangy-chat] 模型推理已禁用，使用知识库模式")
-        return None
+        if self.model is None or self.tokenizer is None:
+            return None
+            
+        try:
+            import torch
+            
+            # 准备输入
+            messages = [{"role": "user", "content": text}]
+            
+            # 使用 HuggingFace tokenizer
+            if hasattr(self.tokenizer, 'apply_chat_template'):
+                prompt = self.tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True
+                )
+            else:
+                prompt = f"Human: {text}\n\nAssistant:"
+            
+            # 编码
+            inputs = self.tokenizer(
+                prompt,
+                return_tensors="pt"
+            ).to(self.device)
+            
+            input_ids = inputs['input_ids']
+            
+            # 生成
+            with torch.no_grad():
+                if hasattr(self.model, 'generate'):
+                    output_ids = self.model.generate(
+                        input_ids,
+                        max_new_tokens=max_length,
+                        temperature=0.7,
+                        do_sample=True
+                    )
+                else:
+                    # 手动生成
+                    outputs = self.model(input_ids)
+                    logits = outputs.logits if hasattr(outputs, 'logits') else outputs[0]
+                    next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
+                    output_ids = torch.cat([input_ids, next_token], dim=1)
+            
+            # 解码
+            response = self.tokenizer.decode(
+                output_ids[0],
+                skip_special_tokens=True
+            )
+            
+            # 移除 prompt 部分
+            if prompt in response:
+                response = response.split(prompt)[-1].strip()
+            
+            # 检查输出质量
+            if response and len(response) > 5:
+                chinese_chars = sum(1 for c in response if '\u4e00' <= c <= '\u9fff')
+                if chinese_chars / len(response) >= 0.3:
+                    return response
+            
+            print("[zhangy-chat] 模型输出质量不佳，使用知识库模式")
+            return None
+            
+        except Exception as e:
+            print(f"[zhangy-chat] 生成失败：{e}")
+            return None
     
     def download_model(self, repo: str = "jingyaogong/minimind"):
         """从 HuggingFace 下载模型"""
