@@ -125,6 +125,12 @@ class ZhangyChatModel:
             if prompt in response:
                 response = response.split(prompt)[-1].strip()
             
+            # 检查是否是乱码（中文字符应该占一定比例）
+            chinese_chars = sum(1 for c in response if '\u4e00' <= c <= '\u9fff')
+            if len(response) > 10 and chinese_chars / len(response) < 0.3:
+                print("[zhangy-chat] 模型输出质量不佳，使用知识库模式")
+                return None
+            
             return response
             
         except Exception as e:

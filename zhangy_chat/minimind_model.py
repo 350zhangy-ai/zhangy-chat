@@ -56,63 +56,78 @@ class Attention(nn.Module):
         self.v_proj = nn.Linear(hidden_size, num_kv_heads * self.head_dim, bias=False)
         self.o_proj = nn.Linear(hidden_size, hidden_size, bias=False)
         
-        # 注册位置编码缓冲区
-        self.register_buffer(
-            "rotary_emb",
-            self._build_rotary_emb(max_seq_len),
-            persistent=False
-        )
-        
         # GQA 重复因子
         self.num_q_per_kv = num_heads // num_kv_heads
 
     def _build_rotary_emb(self, max_seq_len):
+        """构建 rotary embedding"""
+        # 只使用 head_dim 的一半
+        dim = self.head_dim // 2
         inv_freq = 1.0 / (
-            10000 ** (torch.arange(0, self.head_dim, 2).float() / self.head_dim)
+            10000 ** (torch.arange(0, dim, 2).float() / dim)
         )
-        t = torch.arange(max_seq_len).float().unsqueeze(1)
-        freqs = t @ inv_freq.unsqueeze(0)
+        t = torch.arange(max_seq_len).float()
+        freqs = torch.outer(t, inv_freq)
         freqs = torch.cat((freqs, freqs), dim=-1)
-        return torch.stack([freqs.sin(), freqs.cos()], dim=-1)
+        return freqs
 
-    def _apply_rotary(self, x, start_pos):
+    def _apply_rotary(self, x, start_pos, num_heads=None):
+        """应用 rotary embedding"""
         seqlen = x.shape[1]
-        rotary_emb = self.rotary_emb[start_pos : start_pos + seqlen, :, :]
-        rotary_emb = rotary_emb.to(x.device)
-        x_ = x.reshape(x.shape[0], seqlen, -1, self.head_dim)
-        x_rot = x_.reshape_as(rotary_emb[..., 0])
-        x1, x2 = x_rot[..., 0], x_rot[..., 1]
-        c1, c2 = rotary_emb[..., 0], rotary_emb[..., 1]
-        y1 = x1 * c1 - x2 * c2
-        y2 = x1 * c2 + x2 * c1
-        y = torch.stack((y1, y2), dim=-1).flatten(-2)
-        return y.reshape_as(x)
+        
+        # 计算实际的 heads 数
+        if num_heads is None:
+            num_heads = x.shape[-1] // self.head_dim
+        
+        # Reshape 为 [bsz, seq_len, num_heads, head_dim]
+        x_ = x.view(x.shape[0], seqlen, num_heads, self.head_dim)
+        
+        # 获取 rotary 频率
+        freqs = self._build_rotary_emb(start_pos + seqlen).to(x.device)
+        freqs = freqs[start_pos:start_pos+seqlen, :]
+        
+        # 应用 rotary: [seq, dim//2]
+        freqs = freqs.unsqueeze(0).unsqueeze(2)  # [1, seq, 1, dim//2]
+        
+        # 拆分并应用 rotary
+        x1 = x_[..., : self.head_dim // 2]
+        x2 = x_[..., self.head_dim // 2 :]
+        
+        cos = freqs.cos()
+        sin = freqs.sin()
+        
+        y1 = x1 * cos - x2 * sin
+        y2 = x1 * sin + x2 * cos
+        
+        y = torch.cat((y1, y2), dim=-1)
+        return y.view(x.shape[0], seqlen, num_heads * self.head_dim)
 
     def forward(self, x, start_pos=0):
         bsz, seq_len, _ = x.shape
-        
+
         q = self.q_proj(x)
         k = self.k_proj(x)
         v = self.v_proj(x)
-        
-        q = self._apply_rotary(q, start_pos)
-        k = self._apply_rotary(k, start_pos)
-        
+
+        # 应用 rotary embedding
+        q = self._apply_rotary(q, start_pos, self.num_heads)
+        k = self._apply_rotary(k, start_pos, self.num_kv_heads)
+
         # GQA: reshape q and k/v
         q = q.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
         k = k.view(bsz, seq_len, self.num_kv_heads, self.head_dim).transpose(1, 2)
         v = v.view(bsz, seq_len, self.num_kv_heads, self.head_dim).transpose(1, 2)
-        
+
         # 重复 k/v 以匹配 q 的 heads
         if self.num_q_per_kv > 1:
             k = k.repeat_interleave(self.num_q_per_kv, dim=1)
             v = v.repeat_interleave(self.num_q_per_kv, dim=1)
-        
+
         # 简化注意力
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
         attn = F.softmax(scores, dim=-1)
         output = torch.matmul(attn, v)
-        
+
         output = output.transpose(1, 2).reshape(bsz, seq_len, self.hidden_size)
         return self.o_proj(output)
 
