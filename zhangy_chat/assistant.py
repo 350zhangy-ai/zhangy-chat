@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-AI 助手核心模块 - R3 版本
+AI 助手核心模块 - R3 思考版
 像人一样思考，有温度的 AI 助手
 """
 
 import random
 from typing import Optional, Dict
 from datetime import datetime
+from .thinking_engine import ThinkingEngine
 
 
 class Assistant:
-    """AI 助手类 (R3 版本 - zhangy-chat)"""
+    """AI 助手类 (R3 思考版 - zhangy-chat)"""
 
     def __init__(self, config: Optional[Dict] = None,
                  mood_manager=None, preset_manager=None,
@@ -23,6 +24,9 @@ class Assistant:
         self.mood_manager = mood_manager
         self.preset_manager = preset_manager
         self.memory_manager = memory_manager
+
+        # R3 思考引擎
+        self.thinking_engine = ThinkingEngine()
 
         # 知识库 - 让 AI 能回答各种问题
         self.knowledge_base = self._init_knowledge_base()
@@ -428,30 +432,68 @@ class Assistant:
 
     # ==================== 主对话方法 ====================
 
-    def chat(self, query: str) -> str:
+    def chat(self, query: str, context: Optional[Dict] = None) -> str:
         """
-        通用对话 - 像人一样思考
+        通用对话 - 像人一样思考（R3 思考版）
 
         Args:
             query: 用户问题
+            context: 上下文信息（可选）
 
         Returns:
             zhangy-chat 的回复
         """
-        # 1. 检查简单对话
+        # R3 思考引擎：先思考再回应
+        thinking_result = self.thinking_engine.think(query, context)
+
+        # 1. 检查简单对话（无需思考）
         simple_response = self._check_simple_query(query)
         if simple_response:
-            return f"zhangy-chat：{simple_response}"
+            return self._format_response(simple_response, thinking_result)
 
-        # 2. 检查知识库匹配
+        # 2. 检查知识库匹配 + 思考式优化
         for category, data in self.knowledge_base.items():
             for keyword in data["keywords"]:
                 if keyword in query:
-                    response = data["response"](query)
-                    return f"zhangy-chat：{self._apply_mood_style(response)}"
+                    base_response = data["response"](query)
+                    # 思考式优化：添加个性化建议
+                    optimized_response = self._optimize_with_thinking(base_response, thinking_result)
+                    return self._format_response(optimized_response, thinking_result)
 
-        # 3. 通用回复 - 像人一样思考
-        return self._thoughtful_response(query)
+        # 3. 通用回复 - 思考式回应
+        return self._thoughtful_response(query, thinking_result)
+
+    def _format_response(self, response: str, thinking_result: Dict) -> str:
+        """格式化回复（添加思考式前缀）"""
+        # 如果思考模式开启且需要显示思考过程
+        if self.thinking_engine.thinking_mode and self.thinking_engine.show_thinking_process:
+            summary = self.thinking_engine.get_thinking_summary(thinking_result)
+            if summary:
+                return f"zhangy-chat：[思考]{summary}\n\n{response}"
+        return f"zhangy-chat：{response}"
+
+    def _optimize_with_thinking(self, base_response: str, thinking_result: Dict) -> str:
+        """基于思考结果优化回复"""
+        personalization = thinking_result.get("personalization", {})
+        
+        # 如果需要先共情
+        if personalization.get("structure") == "empathy_first":
+            emotion = thinking_result.get("emotion", {})
+            if emotion.get("needs_empathy"):
+                empathy_prefix = self._get_empathy_prefix(emotion.get("emotion", "neutral"))
+                return f"{empathy_prefix}\n\n---\n\n{base_response}"
+        
+        return base_response
+
+    def _get_empathy_prefix(self, emotion: str) -> str:
+        """获取共情前缀"""
+        empathy_map = {
+            "anxious": "我理解你现在的感受，这种担心是很正常的。先深呼吸一下，我们慢慢来分析。",
+            "frustrated": "换谁遇到这种事都会觉得烦，你的感受我懂。别憋着，说出来会好受点。",
+            "tired": "辛苦了，忙到现在确实该歇歇了。身体最重要，不用有负罪感。",
+            "angry": "这事换谁都会生气的，你生气是完全合理的。先消消气，咱们一起想想怎么办。",
+        }
+        return empathy_map.get(emotion, "我理解你的感受，咱们一起来看看怎么解决。")
 
     def _check_simple_query(self, query: str) -> Optional[str]:
         """检查简单对话"""
@@ -500,24 +542,29 @@ class Assistant:
                 return response
         return None
 
-    def _thoughtful_response(self, query: str) -> str:
-        """通用回复 - 像人一样思考"""
-        # 根据问题长度判断
-        if len(query) < 5:
-            return f"""zhangy-chat：## 🤔 需要更多信息
+    def _thoughtful_response(self, query: str, thinking_result: Dict) -> str:
+        """通用回复 - 思考式回应"""
+        # 基于思考结果生成有针对性的回复
+        needs = thinking_result.get("needs", {})
+        emotion = thinking_result.get("emotion", {})
+        
+        # 如果有情绪需求，先共情
+        if emotion.get("needs_empathy"):
+            empathy = self._get_empathy_prefix(emotion.get("emotion", "neutral"))
+            analysis = self._get_analysis_content(query, needs)
+            return f"zhangy-chat：{empathy}\n\n---\n\n{analysis}"
+        
+        # 直接分析
+        analysis = self._get_analysis_content(query, needs)
+        return f"zhangy-chat：{analysis}"
 
-你提到「{query}」，能再多说点吗？
+    def _get_analysis_content(self, query: str, needs: Dict) -> str:
+        """获取分析内容"""
+        core_ask = needs.get("core_ask", query[:50])
+        
+        return f"""## {self.name} 的分析
 
-比如：
-- 具体是什么情况？
-- 遇到了什么问题？
-
-说得越详细，我越能帮到你～"""
-
-        # 通用思考式回复
-        return f"""zhangy-chat：## 🤔 {self.name} 的分析
-
-关于「{query[:50]}{'...' if len(query) > 50 else ''}」，我来帮你分析一下：
+关于「{core_ask}」，我来帮你分析一下：
 
 **分析思路**:
 1. 先明确核心问题是什么

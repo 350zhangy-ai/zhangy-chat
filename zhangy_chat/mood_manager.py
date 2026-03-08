@@ -17,31 +17,31 @@ class MoodManager:
     MOOD_LABELS = {
         "anxious": {
             "name": "焦虑 / 低落",
-            "icon": "😟",
+            "icon": "",
             "style": "empathetic",
             "priority": "comfort_first"
         },
         "focused": {
             "name": "高效 / 专注",
-            "icon": "🎯",
+            "icon": "",
             "style": "concise",
             "priority": "efficiency"
         },
         "relaxed": {
             "name": "轻松 / 愉悦",
-            "icon": "😊",
+            "icon": "",
             "style": "friendly",
             "priority": "casual"
         },
         "calm": {
             "name": "平静 / 温和",
-            "icon": "🌿",
+            "icon": "",
             "style": "gentle",
             "priority": "balanced"
         },
         "tired": {
             "name": "疲惫 / 需要休息",
-            "icon": "😴",
+            "icon": "",
             "style": "caring",
             "priority": "rest_first"
         }

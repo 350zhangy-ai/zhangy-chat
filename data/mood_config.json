@@ -5,6 +5,16 @@
       "mood": "calm",
       "timestamp": "2026-03-07T20:18:53.351963",
       "previous": "calm"
+    },
+    {
+      "mood": "focused",
+      "timestamp": "2026-03-08T11:49:19.294206",
+      "previous": "calm"
+    },
+    {
+      "mood": "calm",
+      "timestamp": "2026-03-08T11:49:22.033863",
+      "previous": "focused"
     }
   ]
 }

@@ -82,10 +82,10 @@ class CMDInterface:
             self.preset_manager.get_current_preset(), {}
         )
 
-        print(f"\n📊 当前配置:")
+        print(f"\n当前配置:")
         print(f"   内存：{mem_info['selected']}GiB (实际：{mem_info['actual']}GiB)")
-        print(f"   心情：{mood_info['icon']} {mood_info['name']}")
-        print(f"   预设：{preset_info.get('icon', '📁')} {preset_info.get('name', '未知')}")
+        print(f"   心情：{mood_info.get('icon', '')} {mood_info['name']}")
+        print(f"   预设：{preset_info.get('name', '未知')}")
 
     def _handle_command(self, cmd: str):
         """处理指令"""
@@ -114,6 +114,8 @@ class CMDInterface:
             '/mood': self._cmd_mood,
             '/preset': self._cmd_preset,
             '/status': self._cmd_status,
+            # R3 思考模式指令
+            '/think': self._cmd_think,
         }
 
         handler = commands.get(command)
@@ -504,6 +506,45 @@ class CMDInterface:
         """退出"""
         print("\n再见！")
         self.running = False
+
+    # R3 思考模式指令
+    def _cmd_think(self, args: str):
+        """思考模式指令"""
+        if not args:
+            mode = "开启" if self.assistant.thinking_engine.thinking_mode else "关闭"
+            depth = self.assistant.thinking_engine.thinking_depth
+            show = "显示" if self.assistant.thinking_engine.show_thinking_process else "隐藏"
+            print(f"\n思考模式状态:")
+            print(f"   开关：{mode}")
+            print(f"   深度：{depth}")
+            print(f"   过程：{show}")
+            print("\n用法:")
+            print("   /think on/off          - 开启/关闭思考")
+            print("   /think light/mid/heavy - 设置思考深度")
+            print("   /think show/hide       - 显示/隐藏思考过程")
+            return
+
+        parts = args.split()
+        subcmd = parts[0].lower()
+
+        if subcmd == "on":
+            self.assistant.thinking_engine.set_thinking_mode(True)
+            print("\n[OK] 思考模式已开启")
+        elif subcmd == "off":
+            self.assistant.thinking_engine.set_thinking_mode(False)
+            print("\n[OK] 思考模式已关闭")
+        elif subcmd in ["light", "mid", "heavy"]:
+            self.assistant.thinking_engine.set_thinking_depth(subcmd)
+            print(f"\n[OK] 思考深度已设置为 {subcmd}")
+        elif subcmd == "show":
+            self.assistant.thinking_engine.show_thinking_process = True
+            print("\n[OK] 已开启思考过程显示")
+        elif subcmd == "hide":
+            self.assistant.thinking_engine.show_thinking_process = False
+            print("\n[OK] 已关闭思考过程显示")
+        else:
+            print(f"\n未知参数：{subcmd}")
+            print("用法：/think [on/off/light/mid/heavy/show/hide]")
 
 
 def main():
