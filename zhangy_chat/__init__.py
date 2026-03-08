@@ -12,6 +12,7 @@ zhangy chat - 高效、专业的本地 AI 助手 (R3 MiniMind 集成版)
 - PresetManager: 场景预设管理
 - ThinkingEngine: 思考决策引擎
 - ZhangyChatModel: zhangy-chat 模型（基于 MiniMind）
+- ExternalAI: 外部 AI 调用（DeepSeek/文心一言/通义千问）
 """
 
 __version__ = "3.0.0"
@@ -27,7 +28,7 @@ from .memory_manager import MemoryManager
 from .mood_manager import MoodManager
 from .preset_manager import PresetManager
 from .thinking_engine import ThinkingEngine
-from .model import ZhangyChatModel
+from .external_ai import ExternalAI, AI_PROVIDERS
 
 __all__ = [
     "ZhangyChat",
@@ -42,5 +43,6 @@ __all__ = [
     "MoodManager",
     "PresetManager",
     "ThinkingEngine",
-    "ZhangyChatModel"
+    "ExternalAI",
+    "AI_PROVIDERS"
 ]

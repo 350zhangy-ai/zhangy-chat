@@ -22,6 +22,7 @@ from zhangy_chat.assistant import Assistant
 from zhangy_chat.memory_manager import MemoryManager
 from zhangy_chat.mood_manager import MoodManager
 from zhangy_chat.preset_manager import PresetManager
+from zhangy_chat.external_ai import ExternalAI, AI_PROVIDERS
 
 
 # ==================== 豆包风格配色 ====================
@@ -93,10 +94,14 @@ class ZhangyChatGUI:
             mood_manager=self.mood_manager,
             preset_manager=self.preset_manager
         )
+        
+        # 初始化外部 AI
+        self.external_ai = ExternalAI()
+        self.use_external_ai = False  # 是否使用外部 AI
 
         # 当前标签页
         self.current_tab = "chat"
-        
+
         # 聊天记录
         self.chat_history = []
 
@@ -147,10 +152,33 @@ class ZhangyChatGUI:
         btn_frame = tk.Frame(nav_frame, bg=Colors.BG_MAIN)
         btn_frame.pack(side=tk.RIGHT, padx=20)
 
+        # 外部 AI 选择下拉框
+        self.ai_provider_var = tk.StringVar(value="none")
+        ai_provider_combo = ttk.Combobox(
+            btn_frame,
+            textvariable=self.ai_provider_var,
+            values=list(AI_PROVIDERS.keys()),
+            width=15,
+            font=("Microsoft YaHei", 9),
+            state="readonly"
+        )
+        ai_provider_combo.pack(side=tk.RIGHT, padx=10)
+        ai_provider_combo.bind("<<ComboboxSelected>>", lambda e: self._on_ai_provider_change())
+        
+        # 外部 AI 标签
+        ai_label = tk.Label(
+            btn_frame,
+            text="外部 AI:",
+            font=("Microsoft YaHei", 9),
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_SECONDARY
+        )
+        ai_label.pack(side=tk.RIGHT, padx=5)
+
         # CMD 模式按钮
         cmd_btn = tk.Button(
             btn_frame,
-            text="⌨️ CMD 模式",
+            text="CMD 模式",
             command=self._switch_to_cmd,
             font=("Microsoft YaHei", 10),
             bg=Colors.BG_SECONDARY,
@@ -167,8 +195,8 @@ class ZhangyChatGUI:
         # 设置按钮
         settings_btn = tk.Button(
             btn_frame,
-            text="⚙️ 设置",
-            command=lambda: self.notebook.select(4),
+            text="设置",
+            command=self._open_settings,
             font=("Microsoft YaHei", 10),
             bg=Colors.BG_SECONDARY,
             fg=Colors.TEXT_PRIMARY,
@@ -735,6 +763,14 @@ R3 新功能:
     def _process_response(self, user_input):
         """处理响应"""
         try:
+            # 如果启用了外部 AI，优先使用外部 AI
+            if self.use_external_ai and self.external_ai.provider != "none":
+                response = self.external_ai.chat(user_input)
+                if response:
+                    self.root.after(0, lambda: self._add_message("ai", f"[{AI_PROVIDERS.get(self.external_ai.provider, '外部 AI')}] {response}", Colors.AI_TEXT))
+                    return
+            
+            # 使用本地 AI 助手
             response = self.assistant.chat(user_input)
             # 移除 "zhangy-chat:" 前缀（如果有）
             if response.startswith("zhangy-chat:"):
@@ -1061,6 +1097,111 @@ R3 新功能:
             messagebox.showinfo("成功", f"数据已导出:\n{path}")
         except Exception as e:
             messagebox.showerror("错误", f"导出失败：{e}")
+
+    # 外部 AI 相关方法
+    def _on_ai_provider_change(self):
+        """外部 AI 提供商切换"""
+        provider = self.ai_provider_var.get()
+        
+        if provider == "none":
+            self.use_external_ai = False
+            self.external_ai.set_provider("none")
+        else:
+            # 打开设置对话框
+            self._open_external_ai_settings(provider)
+    
+    def _open_external_ai_settings(self, provider: str):
+        """打开外部 AI 设置对话框"""
+        settings_window = tk.Toplevel(self.root)
+        settings_window.title(f"设置 {AI_PROVIDERS.get(provider, '外部 AI')}")
+        settings_window.geometry("500x300")
+        settings_window.configure(bg=Colors.BG_MAIN)
+        
+        # 标题
+        title_label = tk.Label(
+            settings_window,
+            text=f"请输入 {AI_PROVIDERS.get(provider, '外部 AI')} 的 API Key",
+            font=("Microsoft YaHei", 11, "bold"),
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY
+        )
+        title_label.pack(padx=20, pady=20)
+        
+        # 说明
+        info_label = tk.Label(
+            settings_window,
+            text="API Key 用于调用外部 AI 服务，不会存储或上传到任何服务器",
+            font=("Microsoft YaHei", 9),
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_HINT
+        )
+        info_label.pack(padx=20, pady=5)
+        
+        # API Key 输入框
+        input_frame = tk.Frame(settings_window, bg=Colors.BG_MAIN)
+        input_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        tk.Label(
+            input_frame,
+            text="API Key:",
+            font=("Microsoft YaHei", 10),
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY
+        ).pack(anchor=tk.W, pady=5)
+        
+        api_key_entry = tk.Entry(
+            input_frame,
+            font=("Microsoft YaHei", 10),
+            bg=Colors.BG_SECONDARY,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            highlightthickness=1,
+            highlightbackground=Colors.BORDER,
+            show="*"
+        )
+        api_key_entry.pack(fill=tk.X, pady=5)
+        
+        # 按钮
+        btn_frame = tk.Frame(settings_window, bg=Colors.BG_MAIN)
+        btn_frame.pack(padx=20, pady=20)
+        
+        def save_settings():
+            api_key = api_key_entry.get().strip()
+            if api_key:
+                self.external_ai.set_provider(provider, api_key)
+                self.use_external_ai = True
+                messagebox.showinfo("成功", f"已启用 {AI_PROVIDERS.get(provider, '外部 AI')}")
+                settings_window.destroy()
+            else:
+                messagebox.showwarning("提示", "请输入 API Key")
+        
+        tk.Button(
+            btn_frame,
+            text="保存",
+            command=save_settings,
+            font=("Microsoft YaHei", 10, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.USER_TEXT,
+            relief=tk.FLAT,
+            padx=20,
+            pady=8
+        ).pack(side=tk.RIGHT, padx=5)
+        
+        tk.Button(
+            btn_frame,
+            text="取消",
+            command=settings_window.destroy,
+            font=("Microsoft YaHei", 10),
+            bg=Colors.BG_SECONDARY,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            padx=20,
+            pady=8
+        ).pack(side=tk.RIGHT, padx=5)
+    
+    def _open_settings(self):
+        """打开设置标签页"""
+        self.notebook.select(4)
 
 
 def main():
