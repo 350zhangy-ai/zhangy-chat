@@ -342,6 +342,10 @@ class Assistant:
         Returns:
             zhangy-chat 的回复
         """
+        # 强制拦截：询问名字时统一回复 zhangy-chat
+        if self._is_name_query(query):
+            return "zhangy-chat：我叫 zhangy-chat，是你的专属 AI 助手～"
+        
         # R3 思考引擎：先思考再回应
         thinking_result = self.thinking_engine.think(query, context)
 
@@ -353,6 +357,14 @@ class Assistant:
 
         # 2. 模型不可用时，使用知识库
         return self._knowledge_base_chat(query, thinking_result)
+    
+    def _is_name_query(self, query: str) -> bool:
+        """检查是否是询问名字的查询"""
+        name_keywords = [
+            "你叫什么", "叫什么名字", "你叫啥", "名字是什么",
+            "你是谁", "你是啥", "你是谁啊", "你是哪位"
+        ]
+        return any(keyword in query for keyword in name_keywords)
 
     def _model_chat(self, query: str) -> Optional[str]:
         """使用 zhangy-chat 模型推理（基于 MiniMind）"""
