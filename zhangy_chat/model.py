@@ -9,47 +9,6 @@ import os
 import sys
 
 
-class SimpleTokenizer:
-    """简单 tokenizer（用于 MiniMind 模型）"""
-    
-    def __init__(self):
-        self.vocab_size = 6400  # MiniMind 默认词表大小
-        
-    def encode(self, text, return_tensors="pt"):
-        """编码文本为 ID"""
-        import torch
-        # 简单字符级编码
-        ids = [ord(c) % self.vocab_size for c in text]
-        if return_tensors == "pt":
-            return torch.tensor([ids])
-        return ids
-    
-    def decode(self, ids, skip_special_tokens=True):
-        """解码 ID 为文本"""
-        if hasattr(ids, 'tolist'):
-            ids = ids.tolist()
-        if isinstance(ids[0], list):
-            ids = ids[0]
-        # 简单字符级解码
-        return ''.join([chr(i % 10000) for i in ids if i > 0])
-    
-    def apply_chat_template(self, messages, tokenize=False, add_generation_prompt=True):
-        """应用对话模板"""
-        prompt = ""
-        for msg in messages:
-            role = msg.get("role", "user")
-            content = msg.get("content", "")
-            if role == "user":
-                prompt += f"Human: {content}\n\n"
-            elif role == "assistant":
-                prompt += f"Assistant: {content}\n\n"
-        
-        if add_generation_prompt:
-            prompt += "Assistant:"
-        
-        return prompt
-
-
 class ZhangyChatModel:
     """zhangy-chat 模型类（基于 MiniMind）"""
     
@@ -89,20 +48,28 @@ class ZhangyChatModel:
                     break
             
             if model_path:
-                # 加载模型
+                # 使用 MiniMind 模型类加载
                 try:
-                    # PyTorch 2.6+ 需要 weights_only=False
-                    self.model = torch.load(
-                        model_path,
-                        map_location=self.device,
-                        weights_only=False
-                    )
-                    print("[zhangy-chat] 模型加载成功！")
+                    from .minimind_model import load_model, MiniMindTokenizer
                     
-                    # 创建简单 tokenizer
-                    self.tokenizer = SimpleTokenizer()
-                    print("[zhangy-chat] Tokenizer 已就绪")
-                    return True
+                    # 加载模型
+                    self.model = load_model(model_path, self.device)
+                    if self.model:
+                        print("[zhangy-chat] 模型加载成功！")
+                        
+                        # 创建 tokenizer
+                        self.tokenizer = MiniMindTokenizer()
+                        print("[zhangy-chat] Tokenizer 已就绪")
+                        print("[zhangy-chat] 模型已就绪，可以开始对话！")
+                        return True
+                    else:
+                        print("[zhangy-chat] 模型加载失败")
+                        return False
+                        
+                except ImportError as e:
+                    print(f"[zhangy-chat] 导入 MiniMind 模型失败：{e}")
+                    print("[zhangy-chat] 将使用知识库模式")
+                    return False
                 except Exception as e:
                     print(f"[zhangy-chat] 模型加载失败：{e}")
                     print("[zhangy-chat] 将使用知识库模式")
@@ -119,61 +86,46 @@ class ZhangyChatModel:
     
     def generate(self, text: str, max_length: int = 512) -> str:
         """生成回复"""
-        if self.model is None:
+        if self.model is None or self.tokenizer is None:
             return None
             
         try:
             import torch
             
-            # 使用 tokenizer
-            if self.tokenizer:
-                messages = [{"role": "user", "content": text}]
-                prompt = self.tokenizer.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True
-                )
-                inputs = self.tokenizer.encode(
-                    prompt,
-                    return_tensors="pt"
-                ).to(self.device)
-                
-                # 检查模型是否有 generate 方法
-                if hasattr(self.model, 'generate'):
-                    with torch.no_grad():
-                        outputs = self.model.generate(
-                            inputs,
-                            max_new_tokens=max_length,
-                            temperature=0.7,
-                            do_sample=True
-                        )
-                    
-                    response = self.tokenizer.decode(
-                        outputs[0],
-                        skip_special_tokens=True
-                    )
-                    return response
-                else:
-                    # 模型没有 generate 方法，使用前向传播
-                    with torch.no_grad():
-                        outputs = self.model(inputs)
-                    
-                    # 处理输出
-                    if isinstance(outputs, tuple):
-                        logits = outputs[0]
-                    else:
-                        logits = outputs
-                    
-                    # 贪婪解码
-                    predicted = torch.argmax(logits, dim=-1)
-                    response = self.tokenizer.decode(
-                        predicted,
-                        skip_special_tokens=True
-                    )
-                    return response
+            # 准备输入
+            messages = [{"role": "user", "content": text}]
+            prompt = self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
             
-            # 没有 tokenizer 时返回 None，使用知识库
-            return None
+            # 编码
+            input_ids = self.tokenizer.encode(
+                prompt,
+                return_tensors="pt"
+            ).to(self.device)
+            
+            # 生成
+            with torch.no_grad():
+                output_ids = self.model.generate(
+                    input_ids,
+                    max_new_tokens=max_length,
+                    temperature=0.7,
+                    do_sample=True
+                )
+            
+            # 解码
+            response = self.tokenizer.decode(
+                output_ids[0],
+                skip_special_tokens=True
+            )
+            
+            # 移除 prompt 部分
+            if prompt in response:
+                response = response.split(prompt)[-1].strip()
+            
+            return response
             
         except Exception as e:
             print(f"[zhangy-chat] 生成失败：{e}")
