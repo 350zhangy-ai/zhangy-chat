@@ -359,9 +359,16 @@ class Assistant:
         if not self.model:
             return None
         
-        # 使用模型包装器生成
-        response = self.model_wrapper.generate(query)
-        return response
+        try:
+            # 使用模型包装器生成
+            response = self.model_wrapper.generate(query)
+            if response:
+                return response
+        except Exception as e:
+            # 模型推理失败，静默降级到知识库
+            pass
+        
+        return None
 
     def _knowledge_base_chat(self, query: str, thinking_result: Dict) -> str:
         """使用知识库回复"""

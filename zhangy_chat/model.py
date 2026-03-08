@@ -9,6 +9,47 @@ import os
 import sys
 
 
+class SimpleTokenizer:
+    """简单 tokenizer（用于 MiniMind 模型）"""
+    
+    def __init__(self):
+        self.vocab_size = 6400  # MiniMind 默认词表大小
+        
+    def encode(self, text, return_tensors="pt"):
+        """编码文本为 ID"""
+        import torch
+        # 简单字符级编码
+        ids = [ord(c) % self.vocab_size for c in text]
+        if return_tensors == "pt":
+            return torch.tensor([ids])
+        return ids
+    
+    def decode(self, ids, skip_special_tokens=True):
+        """解码 ID 为文本"""
+        if hasattr(ids, 'tolist'):
+            ids = ids.tolist()
+        if isinstance(ids[0], list):
+            ids = ids[0]
+        # 简单字符级解码
+        return ''.join([chr(i % 10000) for i in ids if i > 0])
+    
+    def apply_chat_template(self, messages, tokenize=False, add_generation_prompt=True):
+        """应用对话模板"""
+        prompt = ""
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if role == "user":
+                prompt += f"Human: {content}\n\n"
+            elif role == "assistant":
+                prompt += f"Assistant: {content}\n\n"
+        
+        if add_generation_prompt:
+            prompt += "Assistant:"
+        
+        return prompt
+
+
 class ZhangyChatModel:
     """zhangy-chat 模型类（基于 MiniMind）"""
     
@@ -57,6 +98,10 @@ class ZhangyChatModel:
                         weights_only=False
                     )
                     print("[zhangy-chat] 模型加载成功！")
+                    
+                    # 创建简单 tokenizer
+                    self.tokenizer = SimpleTokenizer()
+                    print("[zhangy-chat] Tokenizer 已就绪")
                     return True
                 except Exception as e:
                     print(f"[zhangy-chat] 模型加载失败：{e}")
@@ -80,7 +125,7 @@ class ZhangyChatModel:
         try:
             import torch
             
-            # 如果有 tokenizer
+            # 使用 tokenizer
             if self.tokenizer:
                 messages = [{"role": "user", "content": text}]
                 prompt = self.tokenizer.apply_chat_template(
@@ -93,19 +138,39 @@ class ZhangyChatModel:
                     return_tensors="pt"
                 ).to(self.device)
                 
-                with torch.no_grad():
-                    outputs = self.model.generate(
-                        inputs,
-                        max_new_tokens=max_length,
-                        temperature=0.7,
-                        do_sample=True
+                # 检查模型是否有 generate 方法
+                if hasattr(self.model, 'generate'):
+                    with torch.no_grad():
+                        outputs = self.model.generate(
+                            inputs,
+                            max_new_tokens=max_length,
+                            temperature=0.7,
+                            do_sample=True
+                        )
+                    
+                    response = self.tokenizer.decode(
+                        outputs[0],
+                        skip_special_tokens=True
                     )
-                
-                response = self.tokenizer.decode(
-                    outputs[0],
-                    skip_special_tokens=True
-                )
-                return response
+                    return response
+                else:
+                    # 模型没有 generate 方法，使用前向传播
+                    with torch.no_grad():
+                        outputs = self.model(inputs)
+                    
+                    # 处理输出
+                    if isinstance(outputs, tuple):
+                        logits = outputs[0]
+                    else:
+                        logits = outputs
+                    
+                    # 贪婪解码
+                    predicted = torch.argmax(logits, dim=-1)
+                    response = self.tokenizer.decode(
+                        predicted,
+                        skip_special_tokens=True
+                    )
+                    return response
             
             # 没有 tokenizer 时返回 None，使用知识库
             return None
