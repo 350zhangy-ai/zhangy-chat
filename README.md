@@ -1,17 +1,38 @@
 # zhangy-chat R3
 
 <div align="center">
-  <h3>高效、专业的本地 AI 助手 - 思考版</h3>
-  <p>思考式响应 | 情绪共情 | 个性化适配 | 本地运行</p>
+  <h3>高效、专业的本地 AI 助手 - MiniMind 集成版</h3>
+  <p>MiniMind 模型 | 思考式响应 | 情绪共情 | 本地运行</p>
 </div>
 
 ## 简介
 
-zhangy-chat R3 是一个具备**自主思考能力**的本地 AI 助手。区别于机械响应式 AI，R3 版本能在回应前先思考用户的真实需求、情绪状态和上下文背景，然后给出有针对性、有温度的回答。
+zhangy-chat R3 是一个集成 **MiniMind 模型** 的本地 AI 助手。支持两种模式：
+- **模型模式**：有 MiniMind 模型时，使用模型推理
+- **知识库模式**：无模型时，使用超全知识库回复
+
+所有回应均经过 AI 主动思考（需求拆解、逻辑推理、情绪共情），而非机械匹配预设答案。
 
 ## 核心特性
 
-### 🧠 R3 新增：思考式响应
+### 🧠 MiniMind 模型集成
+
+**支持模型**：
+- MiniMind-768
+- MiniMind-512
+- MiniMind-GRPO
+
+**模型放置**：
+将模型文件放入 `models/zhangy-chat/` 目录，支持以下文件名：
+- `full_sft_768.pth`
+- `full_sft_512.pth`
+- `grpo_768.pth`
+- `model.pth`
+
+**无模型时**：
+自动切换到知识库模式，使用超全知识库回复（覆盖饮食、编程、工作、学习、情感等 12 个领域）
+
+### 🧠 R3 思考式响应
 
 **像人一样思考**：
 - **需求拆解**：分析用户问题的核心诉求和潜在需求
@@ -31,12 +52,6 @@ zhangy-chat：辛苦了，忙到现在确实该歇歇了。身体最重要，不
 ...
 ```
 
-### 🎨 豆包风格 UI
-- **现代简洁**：采用豆包同款配色方案，视觉舒适
-- **气泡对话**：用户/AI 消息采用不同风格气泡，清晰易读
-- **心情选择**：5 种心情选择，调整 AI 回应风格
-- **场景预设**：4 类预设模式，一键切换
-
 ### 📋 任务管理
 - **待办事项**：添加、删除、标记任务，支持优先级
 - **目标规划**：设定目标，拆解里程碑，进度追踪
@@ -55,6 +70,7 @@ zhangy-chat：辛苦了，忙到现在确实该歇歇了。身体最重要，不
 - Python 3.8+
 - 8GB+ RAM
 - Windows 10+ / macOS 12+ / Linux
+- PyTorch（使用模型时需要）
 
 ### 安装
 
@@ -73,15 +89,14 @@ python gui.py
 python main.py -cmd
 ```
 
+### 添加 MiniMind 模型（可选）
+
+1. 下载 MiniMind 模型文件
+2. 创建目录 `models/zhangy-chat/`
+3. 将模型文件放入目录，命名为 `full_sft_768.pth` 或其他支持的文件名
+4. 重启 zhangy-chat，自动加载模型
+
 ## 使用指南
-
-### GUI 界面
-
-1. **对话页面**：输入问题，获取 AI 思考式建议
-2. **任务页面**：管理待办事项
-3. **目标页面**：规划长期目标
-4. **习惯页面**：打卡日常习惯
-5. **设置页面**：配置内存、心情、预设、思考模式
 
 ### CMD 指令
 
@@ -100,7 +115,7 @@ python main.py -cmd
 | `/mem [8/16/32/64]` | 设置内存 | `/mem 16` |
 | `/mood [心情]` | 设置心情 | `/mood 高效` |
 | `/preset [预设]` | 切换预设 | `/preset 办公` |
-| `/status` | 查看状态 | `/status` |
+| `/status` | 查看当前状态 | `/status` |
 | `/think` | 思考模式 | `/think on` |
 | `/gui` | 切换图形界面 | `/gui` |
 | `/exit` | 退出程序 | `/exit` |
@@ -138,41 +153,22 @@ python main.py -cmd
 
 ## 知识库覆盖
 
-### 饮食类
-- 饿/吃饭/吃啥/外卖/食堂/减肥餐
+### 12 大领域
 
-### 编程类
-- Python/Java/JavaScript/写程序/debug/git
-
-### 工作类
-- 上班/辞职/跳槽/面试/加班/涨薪
-
-### 学习类
-- 考试/考研/考证/复习/备考
-
-### 情感类
-- 喜欢/暗恋/表白/恋爱/分手/相亲
-
-### 健康类
-- 运动/减肥/健身/生病/失眠/熬夜
-
-### 购物类
-- 淘宝/京东/手机/电脑/数码推荐
-
-### 旅行类
-- 旅游/景点/酒店/机票/攻略
-
-### 情绪类
-- 累/压力/焦虑/担心/崩溃/烦
-
-### 无聊类
-- 无聊/没事干/剧荒/游戏
-
-### 金钱类
-- 存款/理财/基金/股票/借钱
-
-### 人际类
-- 朋友/社交/孤独/矛盾/吵架
+| 领域 | 关键词 |
+|------|--------|
+| 饮食 | 饿/吃饭/吃啥/外卖/食堂/减肥餐 |
+| 编程 | Python/Java/JavaScript/写程序/debug |
+| 工作 | 上班/辞职/跳槽/面试/加班/涨薪 |
+| 学习 | 考试/考研/考证/复习/备考 |
+| 情感 | 喜欢/暗恋/表白/恋爱/分手/相亲 |
+| 健康 | 运动/减肥/健身/生病/失眠/熬夜 |
+| 购物 | 淘宝/京东/手机/电脑/数码推荐 |
+| 旅行 | 旅游/景点/酒店/机票/攻略 |
+| 情绪 | 累/压力/焦虑/担心/崩溃/烦 |
+| 无聊 | 无聊/没事干/剧荒/游戏 |
+| 金钱 | 存款/理财/基金/股票/借钱 |
+| 人际 | 朋友/社交/孤独/矛盾/吵架 |
 
 ## 项目结构
 
@@ -183,22 +179,31 @@ zhangy_chat/
 │   ├── main.py             # 核心类
 │   ├── task_manager.py     # 任务管理
 │   ├── data_manager.py     # 数据管理
-│   ├── assistant.py        # AI 助手核心（R3 思考版）
+│   ├── assistant.py        # AI 助手（MiniMind 集成）
 │   ├── cmd_interface.py    # CMD 界面
 │   ├── memory_manager.py   # 内存管理
 │   ├── mood_manager.py     # 心情管理
 │   ├── preset_manager.py   # 预设管理
-│   └── thinking_engine.py  # 思考决策引擎（R3 新增）
+│   └── thinking_engine.py  # 思考决策引擎
+├── models/
+│   └── zhangy-chat/        # 放置 MiniMind 模型
+│       ├── full_sft_768.pth
+│       └── ...
 ├── gui.py                  # GUI 界面
 ├── main.py                 # 主程序入口
-├── tests/
-│   └── test_r3.py          # R3 测试
 ├── config.yaml             # 配置文件
 ├── requirements.txt        # 依赖
 └── README.md               # 说明文档
 ```
 
 ## 配置说明
+
+### 模型配置
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| model_path | 模型文件路径 | models/zhangy-chat/ |
+| model_file | 模型文件名 | full_sft_768.pth |
 
 ### 思考模式配置
 
@@ -217,44 +222,36 @@ zhangy_chat/
 | 32GiB | 512MB | 8 | 混合加载 |
 | 64GiB | 1024MB | 16 | 全量加载 |
 
-### 数据存储
-
-- **任务数据**: `data/tasks.json`
-- **目标数据**: `data/goals.json`
-- **习惯数据**: `data/habits.json`
-- **用户画像**: `data/user_profile.json`
-- **备份目录**: `backups/`
-
 ## 测试
 
 ```bash
 # 基础功能测试
-python test_assistant.py
+python -c "from zhangy_chat import Assistant; a = Assistant(); print(a.chat('你好'))"
 
-# 思考功能测试
-python test_thinking.py
-
-# R3 完整测试
-python tests/test_r3.py
+# 检查模型加载
+python -c "from zhangy_chat import Assistant; a = Assistant(); print('Model:', a.model is not None)"
 ```
 
 ## 版本历史
 
-### v3.0.0 (R3) - 思考版
-- ✨ 新增思考决策引擎 (ThinkingEngine)
+### v3.0.0 (R3) - MiniMind 集成版
+- ✨ 集成 MiniMind 模型支持
+- ✨ 新增 thinking_engine.py 思考决策引擎
 - ✨ 需求拆解：分析用户核心诉求和潜在需求
 - ✨ 情绪识别：识别情绪状态，先共情再解答
 - ✨ 上下文关联：基于历史对话理解意图
 - ✨ 个性化适配：根据用户习惯调整回应
 - ✨ 思考过程可视化（可选开关）
 - ✨ CMD 思考指令：/think on/off/light/mid/heavy/show/hide
+- ✨ 超全知识库：覆盖 12 大生活领域
 - ✨ 8/16/32/64GiB 内存配置
 - ✨ 5 种心情标签选择
 - ✨ 4 类场景预设切换
 
-### v2.0.0 (R2) - 双界面版本
-- ✨ GUI + CMD 双界面
-- ✨ 任务/目标/习惯管理
+## 灵感来源
+
+- **MiniMind**: https://github.com/jingyaogong/minimind
+- 思考链（CoT）展示方式参考 MiniMind 的推理过程可视化
 
 ## 开源协议
 
@@ -263,5 +260,5 @@ MIT License
 ---
 
 <div align="center">
-  <sub>使用 ❤️ 制作 | zhangy-chat R3 思考版</sub>
+  <sub>使用 ❤️ 制作 | zhangy-chat R3 MiniMind 集成版</sub>
 </div>
