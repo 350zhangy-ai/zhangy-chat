@@ -43,19 +43,31 @@ class CMDInterface:
 
         while self.running:
             try:
-                cmd = input("\n┌─ zhangy-chat\n└─> ").strip()
-                if not cmd:
+                user_input = input("\n┌─ zhangy-chat\n└─> ").strip()
+                if not user_input:
                     continue
 
-                if cmd.startswith('/'):
-                    self._handle_command(cmd)
+                # 检查退出命令
+                if user_input.lower() in ['exit', 'quit', '退出']:
+                    print("\n再见！")
+                    self.running = False
+                    break
+                    
+                # 检查 GUI 切换命令
+                if user_input.lower() == '/gui':
+                    self._cmd_gui('')
+                    break
+
+                if user_input.startswith('/'):
+                    self._handle_command(user_input)
                 else:
                     # 普通对话
-                    response = self.assistant.chat(cmd)
+                    response = self.assistant.chat(user_input)
                     self._print_response(response)
 
             except KeyboardInterrupt:
                 print("\n\n再见！")
+                self.running = False
                 break
             except Exception as e:
                 print(f"错误：{e}")
