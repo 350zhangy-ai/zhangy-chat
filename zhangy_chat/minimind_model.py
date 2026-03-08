@@ -281,24 +281,37 @@ def load_model(model_path, device='cpu'):
 
 
 class MiniMindTokenizer:
-    """MiniMind 简单 tokenizer"""
+    """MiniMind 简单 tokenizer（基于字符）"""
     
     def __init__(self, vocab_size=6400):
         self.vocab_size = vocab_size
         self.pad_token_id = 0
         self.bos_token_id = 1
         self.eos_token_id = 2
-    
+        # 特殊 tokens 占用 0-9，普通字符从 10 开始
+        self.special_tokens = 10
+        
     def encode(self, text, return_tensors="pt"):
-        """字符级编码"""
+        """编码文本为 ID"""
         import torch
-        ids = [self.bos_token_id] + [ord(c) % (self.vocab_size - 10) + 10 for c in text]
+        # 使用 Unicode 码点作为 ID，偏移特殊 tokens
+        ids = [self.bos_token_id]
+        for c in text:
+            code = ord(c)
+            # 将 Unicode 映射到 vocab 范围内
+            if code < self.special_tokens:
+                ids.append(self.special_tokens + code)
+            elif code < self.vocab_size:
+                ids.append(code)
+            else:
+                # 超出范围，使用哈希
+                ids.append(self.special_tokens + (code % (self.vocab_size - self.special_tokens)))
         if return_tensors == "pt":
             return torch.tensor([ids])
         return ids
     
     def decode(self, ids, skip_special_tokens=True):
-        """字符级解码"""
+        """解码 ID 为文本"""
         if hasattr(ids, 'tolist'):
             ids = ids.tolist()
         if isinstance(ids[0], list):
@@ -308,8 +321,14 @@ class MiniMindTokenizer:
         for i in ids:
             if skip_special_tokens and i in [self.pad_token_id, self.bos_token_id, self.eos_token_id]:
                 continue
-            if i >= 10:
-                text += chr((i - 10) % 10000)
+            if i >= self.special_tokens:
+                # 尝试还原 Unicode
+                code = i
+                if code < self.vocab_size:
+                    try:
+                        text += chr(code)
+                    except:
+                        pass
         return text
     
     def apply_chat_template(self, messages, tokenize=False, add_generation_prompt=True):
