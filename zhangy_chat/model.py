@@ -69,8 +69,10 @@ class ZhangyChatModel:
                         
                         if self.model:
                             print("[zhangy-chat] MiniMind 模型加载成功！")
-                            print("[zhangy-chat] 模型已就绪，可以开始对话！")
-                            return True
+                            print("[zhangy-chat] 但由于模型权重与 tokenizer 不匹配，推理输出为乱码")
+                            print("[zhangy-chat] 将使用知识库模式")
+                            self.model = None  # 禁用模型推理
+                            return False
                         else:
                             print("[zhangy-chat] MiniMind 模型加载失败")
                             return False
@@ -122,6 +124,7 @@ class ZhangyChatModel:
             ).to(self.device)
             
             input_ids = inputs['input_ids']
+            attention_mask = inputs.get('attention_mask', None)
             
             # 生成
             with torch.no_grad():
@@ -130,11 +133,14 @@ class ZhangyChatModel:
                         input_ids,
                         max_new_tokens=max_length,
                         temperature=0.7,
-                        do_sample=True
+                        do_sample=True,
+                        attention_mask=attention_mask,
+                        pad_token_id=self.tokenizer.pad_token_id,
+                        eos_token_id=self.tokenizer.eos_token_id
                     )
                 else:
                     # 手动生成
-                    outputs = self.model(input_ids)
+                    outputs = self.model(input_ids, attention_mask=attention_mask)
                     logits = outputs.logits if hasattr(outputs, 'logits') else outputs[0]
                     next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
                     output_ids = torch.cat([input_ids, next_token], dim=1)
@@ -160,6 +166,8 @@ class ZhangyChatModel:
             
         except Exception as e:
             print(f"[zhangy-chat] 生成失败：{e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def download_model(self, repo: str = "jingyaogong/minimind"):
