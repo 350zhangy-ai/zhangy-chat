@@ -32,7 +32,7 @@ class ZhangyChatModel:
             from transformers import AutoModelForCausalLM, AutoTokenizer
             
             # 使用 ModelScope 国内镜像
-            print(f"[zhangy-chat] 加载 Qwen2.5-0.5B-Instruct")
+            print(f"[zhangy-chat] 加载 zhangy-chat 模型...")
             print(f"[zhangy-chat] 设备：{self.device}")
             print("[zhangy-chat] 首次加载需要下载模型（约 1GB），请耐心等待...")
             
@@ -42,6 +42,8 @@ class ZhangyChatModel:
             # 尝试从 ModelScope 加载
             try:
                 from modelscope import snapshot_download
+                # 下载 Qwen2.5-0.5B 作为 zhangy-chat 模型
+                print("[zhangy-chat] 正在从 ModelScope 下载 zhangy-chat 模型...")
                 model_dir = snapshot_download('qwen/Qwen2.5-0.5B-Instruct')
                 
                 self.tokenizer = AutoTokenizer.from_pretrained(
@@ -71,7 +73,7 @@ class ZhangyChatModel:
                     device_map="auto" if self.device == "cuda" else None
                 )
             
-            print("[zhangy-chat] 模型加载成功！")
+            print("[zhangy-chat] zhangy-chat 模型加载成功！")
             return True
             
         except Exception as e:
