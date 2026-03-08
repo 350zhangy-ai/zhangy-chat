@@ -43,16 +43,17 @@ class MLP(nn.Module):
 
 
 class Attention(nn.Module):
-    def __init__(self, hidden_size, num_heads, max_seq_len=512):
+    def __init__(self, hidden_size, num_heads, num_kv_heads, max_seq_len=512):
         super().__init__()
         self.hidden_size = hidden_size
         self.num_heads = num_heads
+        self.num_kv_heads = num_kv_heads
         self.head_dim = hidden_size // num_heads
         self.max_seq_len = max_seq_len
         
         self.q_proj = nn.Linear(hidden_size, hidden_size, bias=False)
-        self.k_proj = nn.Linear(hidden_size, hidden_size, bias=False)
-        self.v_proj = nn.Linear(hidden_size, hidden_size, bias=False)
+        self.k_proj = nn.Linear(hidden_size, num_kv_heads * self.head_dim, bias=False)
+        self.v_proj = nn.Linear(hidden_size, num_kv_heads * self.head_dim, bias=False)
         self.o_proj = nn.Linear(hidden_size, hidden_size, bias=False)
         
         # 注册位置编码缓冲区
@@ -61,6 +62,9 @@ class Attention(nn.Module):
             self._build_rotary_emb(max_seq_len),
             persistent=False
         )
+        
+        # GQA 重复因子
+        self.num_q_per_kv = num_heads // num_kv_heads
 
     def _build_rotary_emb(self, max_seq_len):
         inv_freq = 1.0 / (
@@ -75,7 +79,7 @@ class Attention(nn.Module):
         seqlen = x.shape[1]
         rotary_emb = self.rotary_emb[start_pos : start_pos + seqlen, :, :]
         rotary_emb = rotary_emb.to(x.device)
-        x_ = x.reshape(x.shape[0], seqlen, self.num_heads, self.head_dim)
+        x_ = x.reshape(x.shape[0], seqlen, -1, self.head_dim)
         x_rot = x_.reshape_as(rotary_emb[..., 0])
         x1, x2 = x_rot[..., 0], x_rot[..., 1]
         c1, c2 = rotary_emb[..., 0], rotary_emb[..., 1]
@@ -94,9 +98,15 @@ class Attention(nn.Module):
         q = self._apply_rotary(q, start_pos)
         k = self._apply_rotary(k, start_pos)
         
+        # GQA: reshape q and k/v
         q = q.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
-        k = k.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
-        v = v.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        k = k.view(bsz, seq_len, self.num_kv_heads, self.head_dim).transpose(1, 2)
+        v = v.view(bsz, seq_len, self.num_kv_heads, self.head_dim).transpose(1, 2)
+        
+        # 重复 k/v 以匹配 q 的 heads
+        if self.num_q_per_kv > 1:
+            k = k.repeat_interleave(self.num_q_per_kv, dim=1)
+            v = v.repeat_interleave(self.num_q_per_kv, dim=1)
         
         # 简化注意力
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
@@ -108,9 +118,9 @@ class Attention(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, hidden_size, num_heads, intermediate_size):
+    def __init__(self, hidden_size, num_heads, num_kv_heads, intermediate_size):
         super().__init__()
-        self.self_attn = Attention(hidden_size, num_heads)
+        self.self_attn = Attention(hidden_size, num_heads, num_kv_heads)
         self.input_layernorm = RMSNorm(hidden_size)
         self.post_attention_layernorm = RMSNorm(hidden_size)
         self.mlp = MLP(hidden_size, intermediate_size)
@@ -125,7 +135,7 @@ class MiniMindLM(nn.Module):
     """MiniMind 语言模型"""
     
     def __init__(self, vocab_size=6400, hidden_size=768, num_layers=8,
-                 num_heads=8, intermediate_size=2048, max_seq_len=512):
+                 num_heads=12, num_kv_heads=3, intermediate_size=2048, max_seq_len=512):
         super().__init__()
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
@@ -134,7 +144,7 @@ class MiniMindLM(nn.Module):
         self.embed_tokens = nn.Embedding(vocab_size, hidden_size)
         
         self.layers = nn.ModuleList([
-            TransformerBlock(hidden_size, num_heads, intermediate_size)
+            TransformerBlock(hidden_size, num_heads, num_kv_heads, intermediate_size)
             for _ in range(num_layers)
         ])
         
@@ -202,15 +212,28 @@ def load_model(model_path, device='cpu'):
         embed_weight = checkpoint['model.embed_tokens.weight']
         vocab_size, hidden_size = embed_weight.shape
         
-        # 推断层数
-        num_layers = sum(1 for k in checkpoint.keys() if 'model.layers.' in k and '.weight' in k) // 7
+        # 推断层数 - 找最大层号
+        layer_nums = set()
+        for k in checkpoint.keys():
+            if 'model.layers.' in k:
+                parts = k.split('.')
+                if len(parts) > 2:
+                    try:
+                        layer_nums.add(int(parts[2]))
+                    except:
+                        pass
+        num_layers = max(layer_nums) + 1 if layer_nums else 16
         
-        # 推断 head_dim 和 num_heads
+        # 推断 num_heads 和 num_kv_heads
         q_proj_weight = checkpoint['model.layers.0.self_attn.q_proj.weight']
-        head_dim = q_proj_weight.shape[0] // (hidden_size // 64)
-        num_heads = hidden_size // head_dim
+        k_proj_weight = checkpoint['model.layers.0.self_attn.k_proj.weight']
         
-        print(f"[MiniMind] 模型配置：vocab={vocab_size}, hidden={hidden_size}, layers={num_layers}, heads={num_heads}")
+        head_dim = q_proj_weight.shape[0] // 12  # 假设 num_heads=12
+        num_heads = hidden_size // head_dim
+        num_kv_heads = k_proj_weight.shape[0] // head_dim
+        
+        print(f"[MiniMind] 模型配置：vocab={vocab_size}, hidden={hidden_size}, layers={num_layers}")
+        print(f"[MiniMind] num_heads={num_heads}, num_kv_heads={num_kv_heads}, head_dim={head_dim}")
         
         # 创建模型
         model = MiniMindLM(
@@ -218,6 +241,7 @@ def load_model(model_path, device='cpu'):
             hidden_size=hidden_size,
             num_layers=num_layers,
             num_heads=num_heads,
+            num_kv_heads=num_kv_heads,
             intermediate_size=hidden_size * 8 // 3,
             max_seq_len=512
         )
