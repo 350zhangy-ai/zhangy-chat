@@ -104,7 +104,7 @@ class Assistant:
     def _get_food_response(self, query: str) -> str:
         """饮食类回复"""
         responses = [
-            """## 🍽️ 吃饭建议
+            """## 吃饭建议
 
 **快速解决**:
 - 点外卖：美团/饿了么，30 分钟送到
