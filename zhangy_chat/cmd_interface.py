@@ -58,6 +58,14 @@ class CMDInterface:
                 if user_input.lower() == '/gui':
                     self._cmd_gui('')
                     break
+                
+                # 检查深度思考命令
+                if user_input.lower().startswith('/deep '):
+                    deep_query = user_input[6:].strip()
+                    if deep_query:
+                        response = self.assistant.chat(deep_query, deep_thinking=True)
+                        self._print_response(response)
+                    continue
 
                 if user_input.startswith('/'):
                     self._handle_command(user_input)

@@ -331,13 +331,14 @@ class Assistant:
 
     # ==================== 主对话方法 ====================
 
-    def chat(self, query: str, context: Optional[Dict] = None) -> str:
+    def chat(self, query: str, context: Optional[Dict] = None, deep_thinking: bool = False) -> str:
         """
-        通用对话 - MiniMind 模型 + 知识库
+        通用对话 - MiniMind 模型 + 知识库 + 深度思考
 
         Args:
             query: 用户问题
             context: 上下文信息（可选）
+            deep_thinking: 是否启用深度思考
 
         Returns:
             zhangy-chat 的回复
@@ -347,16 +348,16 @@ class Assistant:
             return "zhangy-chat：我叫 zhangy-chat，是你的专属 AI 助手～"
         
         # R3 思考引擎：先思考再回应
-        thinking_result = self.thinking_engine.think(query, context)
+        thinking_result = self.thinking_engine.think(query, context, deep_thinking)
 
         # 1. 尝试使用 MiniMind 模型推理
         if self.model:
             model_response = self._model_chat(query)
             if model_response:
-                return self._format_response(model_response, thinking_result)
+                return self._format_response(model_response, thinking_result, deep_thinking)
 
         # 2. 模型不可用时，使用知识库
-        return self._knowledge_base_chat(query, thinking_result)
+        return self._knowledge_base_chat(query, thinking_result, deep_thinking)
     
     def _is_name_query(self, query: str) -> bool:
         """检查是否是询问名字的查询"""
@@ -382,12 +383,12 @@ class Assistant:
         
         return None
 
-    def _knowledge_base_chat(self, query: str, thinking_result: Dict) -> str:
+    def _knowledge_base_chat(self, query: str, thinking_result: Dict, deep_thinking: bool = False) -> str:
         """使用知识库回复"""
         # 1. 检查简单对话
         simple_response = self._check_simple_query(query)
         if simple_response:
-            return self._format_response(simple_response, thinking_result)
+            return self._format_response(simple_response, thinking_result, deep_thinking)
 
         # 2. 检查知识库匹配
         for category, data in self.knowledge_base.items():
@@ -398,21 +399,52 @@ class Assistant:
                         base_response, thinking_result
                     )
                     return self._format_response(
-                        optimized_response, thinking_result
+                        optimized_response, thinking_result, deep_thinking
                     )
 
         # 3. 通用回复 - 思考式回应
-        return self._thoughtful_response(query, thinking_result)
+        return self._thoughtful_response(query, thinking_result, deep_thinking)
 
-    def _format_response(self, response: str, thinking_result: Dict) -> str:
+    def _format_response(self, response: str, thinking_result: Dict, deep_thinking: bool = False) -> str:
         """格式化回复"""
+        # 如果启用深度思考
+        if deep_thinking or thinking_result.get("depth") == "heavy":
+            deep_summary = self._get_deep_thinking_summary(thinking_result)
+            if deep_summary:
+                return f"zhangy-chat：[深度思考]{deep_summary}\n\n{response}"
+        
         # 如果思考模式开启且需要显示思考过程
-        if (self.thinking_engine.thinking_mode and 
+        if (self.thinking_engine.thinking_mode and
             self.thinking_engine.show_thinking_process):
             summary = self.thinking_engine.get_thinking_summary(thinking_result)
             if summary:
                 return f"zhangy-chat：[思考]{summary}\n\n{response}"
         return f"zhangy-chat：{response}"
+    
+    def _get_deep_thinking_summary(self, thinking_result: Dict) -> str:
+        """获取深度思考摘要"""
+        deep = thinking_result.get("deep_analysis", {})
+        if not deep:
+            return ""
+        
+        parts = []
+        
+        # 分析维度
+        dimensions = deep.get("dimensions", [])
+        if dimensions:
+            parts.append("分析维度：" + " | ".join(dimensions[:3]))
+        
+        # 推理链条
+        reasoning = deep.get("reasoning", [])
+        if reasoning:
+            parts.append("推理：" + " → ".join(reasoning[:3]))
+        
+        # 建议
+        suggestions = deep.get("suggestions", [])
+        if suggestions:
+            parts.append("建议：" + suggestions[0])
+        
+        return " | ".join(parts) if parts else "深度分析中..."
 
     def _optimize_with_thinking(self, base_response: str, thinking_result: Dict) -> str:
         """基于思考结果优化回复"""

@@ -51,13 +51,14 @@ class ThinkingEngine:
         with open(profile_path, 'w', encoding='utf-8') as f:
             json.dump(self.user_profile, f, ensure_ascii=False, indent=2)
 
-    def think(self, query: str, context: Optional[Dict] = None) -> Dict:
+    def think(self, query: str, context: Optional[Dict] = None, deep_thinking: bool = False) -> Dict:
         """
         思考流程 - 核心方法
 
         Args:
             query: 用户输入
             context: 上下文信息（情绪、历史对话等）
+            deep_thinking: 是否启用深度思考
 
         Returns:
             思考结果字典
@@ -77,7 +78,12 @@ class ThinkingEngine:
         # 4. 个性化适配
         personalization = self._personalize_response(needs_analysis, emotion_analysis)
 
-        # 5. 生成思考结论
+        # 5. 深度思考（可选）
+        deep_analysis = {}
+        if deep_thinking or self.thinking_depth == "heavy":
+            deep_analysis = self._deep_analysis(query, context)
+
+        # 6. 生成思考结论
         thinking_result = {
             "mode": "thinking",
             "depth": self.thinking_depth,
@@ -85,6 +91,7 @@ class ThinkingEngine:
             "emotion": emotion_analysis,
             "context": context_relevance,
             "personalization": personalization,
+            "deep_analysis": deep_analysis,
             "suggested_response_style": self._suggest_response_style(personalization),
             "timestamp": datetime.now().isoformat()
         }
@@ -140,6 +147,109 @@ class ThinkingEngine:
             potential.append("needs_empathy_first")
 
         return potential
+
+    def _deep_analysis(self, query: str, context: Optional[Dict]) -> Dict:
+        """深度思考分析"""
+        # 1. 多维度拆解问题
+        dimensions = self._analyze_dimensions(query)
+        
+        # 2. 推理可能的原因/方案
+        reasoning = self._generate_reasoning(query, dimensions)
+        
+        # 3. 评估各方案的利弊
+        evaluation = self._evaluate_options(reasoning)
+        
+        # 4. 生成建议
+        suggestions = self._generate_suggestions(evaluation, context)
+        
+        return {
+            "dimensions": dimensions,
+            "reasoning": reasoning,
+            "evaluation": evaluation,
+            "suggestions": suggestions
+        }
+    
+    def _analyze_dimensions(self, query: str) -> List[str]:
+        """多维度分析问题"""
+        dimensions = []
+        
+        # 时间维度
+        if any(w in query for w in ["以后", "未来", "长期", "短期", "现在", "以后"]):
+            dimensions.append("时间维度：需要考虑短期和长期影响")
+        
+        # 利弊维度
+        if any(w in query for w in ["要不要", "该不该", "选哪个", "是否"]):
+            dimensions.append("决策维度：需要权衡利弊得失")
+        
+        # 情绪维度
+        if any(w in query for w in ["烦", "累", "难", "压力", "焦虑"]):
+            dimensions.append("情绪维度：需要关注情感需求")
+        
+        # 资源维度
+        if any(w in query for w in ["钱", "时间", "精力", "人手", "资源"]):
+            dimensions.append("资源维度：需要考虑资源限制")
+        
+        # 人际维度
+        if any(w in query for w in ["别人", "家人", "朋友", "同事", "领导"]):
+            dimensions.append("人际维度：需要考虑他人感受")
+        
+        if not dimensions:
+            dimensions.append("常规问题：按标准流程分析")
+        
+        return dimensions
+    
+    def _generate_reasoning(self, query: str, dimensions: List[str]) -> List[str]:
+        """生成推理链条"""
+        reasoning = []
+        
+        # 基础推理模板
+        if "时间维度" in str(dimensions):
+            reasoning.append("第一步：分析短期影响（1-3 个月）")
+            reasoning.append("第二步：分析长期影响（6 个月以上）")
+            reasoning.append("第三步：权衡短期和长期利益")
+        
+        if "决策维度" in str(dimensions):
+            reasoning.append("第一步：列出所有可选方案")
+            reasoning.append("第二步：分析每个方案的风险和收益")
+            reasoning.append("第三步：评估个人承受能力和优先级")
+        
+        if "情绪维度" in str(dimensions):
+            reasoning.append("第一步：接纳和理解当前情绪")
+            reasoning.append("第二步：分析情绪背后的真实需求")
+            reasoning.append("第三步：寻找情绪调节方法")
+        
+        if not reasoning:
+            reasoning.append("第一步：明确问题核心")
+            reasoning.append("第二步：分析关键因素")
+            reasoning.append("第三步：给出建议方案")
+        
+        return reasoning
+    
+    def _evaluate_options(self, reasoning: List[str]) -> Dict:
+        """评估各方案"""
+        return {
+            "has_multiple_options": len(reasoning) > 3,
+            "complexity": "high" if len(reasoning) > 5 else "medium",
+            "risk_level": "需要根据具体情况评估"
+        }
+    
+    def _generate_suggestions(self, evaluation: Dict, context: Optional[Dict]) -> List[str]:
+        """生成建议"""
+        suggestions = [
+            "建议从最小可执行的步骤开始",
+            "在做决定前，可以先收集更多信息",
+            "如有需要，可以寻求专业人士的建议"
+        ]
+        
+        # 基于评估调整建议
+        if evaluation.get("complexity") == "high":
+            suggestions.insert(0, "这个问题比较复杂，建议分步骤处理")
+        
+        # 基于上下文调整
+        if context and context.get("emotion") == "anxious":
+            suggestions.insert(0, "先深呼吸，不用急着做决定")
+        
+        return suggestions
 
     def _extract_core_ask(self, query: str) -> str:
         """提取核心诉求"""
