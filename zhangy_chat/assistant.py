@@ -149,7 +149,7 @@ class Assistant:
 
     def _get_coding_response(self, query: str) -> str:
         """编程类回复"""
-        return """## 💻 编程建议
+        return """## 编程建议
 
 **学习路线**:
 - 入门：Python（语法简单，应用广）
@@ -170,7 +170,7 @@ class Assistant:
 
     def _get_work_response(self, query: str) -> str:
         """工作类回复"""
-        return """## 💼 工作建议
+        return """## 工作建议
 
 **职场生存**:
 - 少说话多做事，尤其是新人
