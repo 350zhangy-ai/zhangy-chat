@@ -1,14 +1,14 @@
-name: zhangy chat
-version: 2.0.0
-description: 高效、专业的本地 AI 助手 - 双界面版本
+name: zhangy-chat
+version: 3.0.0
+description: 高效、专业的本地 AI 助手 - 豆包风格美化版
 
 core_positioning:
-  定位: 专注于工作效率与情感陪伴的全能型专属助手
-  目标用户: 学生、职场人、自由职业者
-  部署方式: 本地部署，双界面（GUI+CMD）
+  定位：专注于工作效率与情感陪伴的全能型专属助手
+  目标用户：学生、职场人、自由职业者
+  部署方式：本地部署，双界面（GUI+CMD）
 
 personality:
-  name: zhangy
+  name: zhangy-chat
   性格:
     - 理性温柔
     - 耐心细致
@@ -78,7 +78,7 @@ deployment:
     - Python 3.8+
     - 8GB+ RAM
     - 现代 CPU
-  部署方式: 本地运行
-  隐私保护: 所有数据本地处理，不上传云端
+  部署方式：本地运行
+  隐私保护：所有数据本地处理，不上传云端
 
 license: MIT License

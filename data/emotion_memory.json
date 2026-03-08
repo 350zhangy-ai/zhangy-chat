@@ -59,8 +59,14 @@
       "intensity": 1,
       "text": "视频",
       "timestamp": "2026-03-07T20:57:10.301485"
+    },
+    {
+      "emotion": "neutral",
+      "intensity": 1,
+      "text": "我叫zhangy",
+      "timestamp": "2026-03-08T11:17:48.764804"
     }
   ],
   "intensity_level": "medium",
-  "last_updated": "2026-03-08T10:52:57.178082"
+  "last_updated": "2026-03-08T11:17:48.764814"
 }

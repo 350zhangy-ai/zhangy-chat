@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-zhangy chat - 图形界面版本 (R3 版本)
-新增：内存配置、心情选择、预设管理
+zhangy chat - 图形界面版本 (R3 豆包风格美化版)
+现代、简洁、优雅的 UI 设计
 """
 
 import tkinter as tk
@@ -24,40 +24,84 @@ from zhangy_chat.mood_manager import MoodManager
 from zhangy_chat.preset_manager import PresetManager
 
 
+# ==================== 豆包风格配色 ====================
+class Colors:
+    """配色方案"""
+    # 主色调
+    PRIMARY = "#5B8FF9"        # 豆包蓝
+    PRIMARY_LIGHT = "#E8F3FF"  # 浅蓝背景
+    PRIMARY_DARK = "#3A78E8"   # 深蓝
+    
+    # 背景色
+    BG_MAIN = "#FFFFFF"        # 主背景
+    BG_SECONDARY = "#F5F7FA"   # 次级背景
+    BG_CHAT = "#F5F7FA"        # 聊天背景
+    
+    # 文字色
+    TEXT_PRIMARY = "#1F2329"   # 主文字
+    TEXT_SECONDARY = "#646A73" # 次级文字
+    TEXT_HINT = "#9DA5AE"      # 提示文字
+    
+    # 功能色
+    SUCCESS = "#00B365"        # 成功绿
+    WARNING = "#FF7D00"        # 警告橙
+    ERROR = "#F53F3F"          # 错误红
+    INFO = "#5B8FF9"           # 信息蓝
+    
+    # 边框色
+    BORDER = "#DEE3EA"         # 边框灰
+    BORDER_LIGHT = "#EFF1F5"   # 浅边框
+    
+    # 用户消息
+    USER_BG = "#5B8FF9"        # 用户消息背景
+    USER_TEXT = "#FFFFFF"      # 用户消息文字
+    
+    # AI 消息
+    AI_BG = "#FFFFFF"          # AI 消息背景
+    AI_TEXT = "#1F2329"        # AI 消息文字
+
+
 class ZhangyChatGUI:
-    """zhangy chat 图形界面类 (R3)"""
+    """zhangy chat 图形界面类 (R3 豆包风格)"""
 
     def __init__(self, root):
         """初始化 GUI"""
         self.root = root
-        self.root.title("zhangy chat R3 - 专业 AI 助手")
-        self.root.geometry("1100x750")
-        self.root.minsize(900, 650)
+        self.root.title("zhangy-chat R3")
+        self.root.geometry("1200x800")
+        self.root.minsize(1000, 700)
+        
+        # 设置窗口图标（如果有）
+        try:
+            self.root.iconbitmap("icon.ico")
+        except:
+            pass
 
         # 加载配置
         self.config = self._load_config()
-        self.name = self.config.get('name', 'zhangy chat')
-        
-        # 初始化核心模块（R3 新增）
+        self.name = "zhangy-chat"
+
+        # 初始化核心模块
         self.task_manager = TaskManager()
         self.data_manager = DataManager()
         self.memory_manager = MemoryManager()
         self.mood_manager = MoodManager()
         self.preset_manager = PresetManager()
-        
-        # 初始化助手并注入管理器
+
+        # 初始化助手
         self.assistant = Assistant(
             mood_manager=self.mood_manager,
             preset_manager=self.preset_manager
         )
-        
+
         # 当前标签页
         self.current_tab = "chat"
         
+        # 聊天记录
+        self.chat_history = []
+
         # 创建界面
         self._create_widgets()
-        
-        # 加载初始数据
         self._load_initial_data()
 
     def _load_config(self):
@@ -69,42 +113,94 @@ class ZhangyChatGUI:
         return {}
 
     def _create_widgets(self):
-        """创建界面组件"""
-        # 顶部标题栏
-        title_frame = tk.Frame(self.root, bg="#2c3e50", height=50)
-        title_frame.pack(fill=tk.X)
-        title_frame.pack_propagate(False)
-
-        title_label = tk.Label(
-            title_frame,
-            text=f"  {self.name}  R3",
-            font=("Microsoft YaHei", 16, "bold"),
-            bg="#2c3e50",
-            fg="white"
-        )
-        title_label.pack(side=tk.LEFT, padx=10, pady=10)
+        """创建界面组件 - 豆包风格"""
+        self.root.configure(bg=Colors.BG_SECONDARY)
         
-        # CMD 模式切换按钮
+        # ==================== 顶部导航栏 ====================
+        nav_frame = tk.Frame(self.root, bg=Colors.BG_MAIN, height=60)
+        nav_frame.pack(fill=tk.X)
+        nav_frame.pack_propagate(False)
+
+        # Logo 和标题
+        logo_frame = tk.Frame(nav_frame, bg=Colors.BG_MAIN)
+        logo_frame.pack(side=tk.LEFT, padx=20)
+        
+        logo_label = tk.Label(
+            logo_frame,
+            text="💬 zhangy-chat",
+            font=("Microsoft YaHei", 18, "bold"),
+            bg=Colors.BG_MAIN,
+            fg=Colors.PRIMARY
+        )
+        logo_label.pack(side=tk.LEFT)
+        
+        version_label = tk.Label(
+            logo_frame,
+            text="R3",
+            font=("Microsoft YaHei", 10),
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_HINT
+        )
+        version_label.pack(side=tk.LEFT, padx=10, pady=5)
+
+        # 右侧按钮
+        btn_frame = tk.Frame(nav_frame, bg=Colors.BG_MAIN)
+        btn_frame.pack(side=tk.RIGHT, padx=20)
+
+        # CMD 模式按钮
         cmd_btn = tk.Button(
-            title_frame,
-            text="切换 CMD 模式",
+            btn_frame,
+            text="⌨️ CMD 模式",
             command=self._switch_to_cmd,
-            font=("Microsoft YaHei", 9),
-            bg="#34495e",
-            fg="white",
+            font=("Microsoft YaHei", 10),
+            bg=Colors.BG_SECONDARY,
+            fg=Colors.TEXT_PRIMARY,
             relief=tk.FLAT,
-            padx=10,
-            pady=5
+            padx=15,
+            pady=8,
+            cursor="hand2"
         )
-        cmd_btn.pack(side=tk.RIGHT, padx=10, pady=10)
+        cmd_btn.pack(side=tk.RIGHT, padx=5)
+        cmd_btn.bind("<Enter>", lambda e: cmd_btn.config(bg=Colors.BORDER))
+        cmd_btn.bind("<Leave>", lambda e: cmd_btn.config(bg=Colors.BG_SECONDARY))
 
-        # 主内容区域 - 使用 Notebook 实现标签页
-        main_frame = tk.Frame(self.root, bg="#ecf0f1")
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # 设置按钮
+        settings_btn = tk.Button(
+            btn_frame,
+            text="⚙️ 设置",
+            command=lambda: self.notebook.select(4),
+            font=("Microsoft YaHei", 10),
+            bg=Colors.BG_SECONDARY,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            padx=15,
+            pady=8,
+            cursor="hand2"
+        )
+        settings_btn.pack(side=tk.RIGHT, padx=5)
+        settings_btn.bind("<Enter>", lambda e: settings_btn.config(bg=Colors.BORDER))
+        settings_btn.bind("<Leave>", lambda e: settings_btn.config(bg=Colors.BG_SECONDARY))
+
+        # ==================== 主内容区域 ====================
+        main_frame = tk.Frame(self.root, bg=Colors.BG_SECONDARY)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=15)
+
+        # 使用 Notebook 实现标签页
+        self.notebook = ttk.Notebook(main_frame, style="Custom.TNotebook")
+        self.notebook.pack(fill=tk.BOTH, expand=True)
         
-        self.notebook = ttk.Notebook(main_frame)
-        self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
+        # 自定义 Notebook 样式
+        style = ttk.Style()
+        style.configure("Custom.TNotebook", background=Colors.BG_SECONDARY, borderwidth=0)
+        style.configure("Custom.TNotebook.Tab", 
+                       padding=(20, 10), 
+                       font=("Microsoft YaHei", 10),
+                       background=Colors.BG_SECONDARY,
+                       foreground=Colors.TEXT_SECONDARY)
+        style.map("Custom.TNotebook.Tab",
+                 background=[("selected", Colors.BG_MAIN)],
+                 foreground=[("selected", Colors.PRIMARY)])
+
         # 创建各功能标签页
         self._create_chat_tab()
         self._create_task_tab()
@@ -112,332 +208,434 @@ class ZhangyChatGUI:
         self._create_habit_tab()
         self._create_settings_tab()
 
-        # 底部状态栏
-        status_frame = tk.Frame(self.root, bg="#2c3e50", height=30)
+        # ==================== 底部状态栏 ====================
+        status_frame = tk.Frame(self.root, bg=Colors.BG_MAIN, height=40)
         status_frame.pack(fill=tk.X)
         status_frame.pack_propagate(False)
 
+        # 状态文字
         self.status_label = tk.Label(
             status_frame,
-            text="就绪",
+            text="✓ 就绪",
             font=("Microsoft YaHei", 9),
-            bg="#2c3e50",
-            fg="#bdc3c7"
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_HINT
         )
-        self.status_label.pack(side=tk.LEFT, padx=10)
-        
+        self.status_label.pack(side=tk.LEFT, padx=20)
+
         # 每日小贴士
         self.tip_label = tk.Label(
             status_frame,
             text=self.assistant.get_daily_tip(),
             font=("Microsoft YaHei", 9),
-            bg="#2c3e50",
-            fg="#2ecc71"
+            bg=Colors.BG_MAIN,
+            fg=Colors.SUCCESS
         )
-        self.tip_label.pack(side=tk.RIGHT, padx=10)
+        self.tip_label.pack(side=tk.RIGHT, padx=20)
 
     def _create_chat_tab(self):
-        """创建聊天标签页"""
-        chat_frame = tk.Frame(self.notebook, bg="#ecf0f1")
+        """创建聊天标签页 - 豆包风格"""
+        chat_frame = tk.Frame(self.notebook, bg=Colors.BG_CHAT)
         self.notebook.add(chat_frame, text="💬 对话")
-        
-        # R3 新增：心情选择区
-        mood_frame = tk.LabelFrame(chat_frame, text="💚 当前心情", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
-        mood_frame.pack(fill=tk.X, padx=10, pady=10)
-        
+
+        # ==================== 心情选择区 ====================
+        mood_frame = tk.LabelFrame(
+            chat_frame, 
+            text="💚 当前心情", 
+            font=("Microsoft YaHei", 9, "bold"), 
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            bd=1
+        )
+        mood_frame.pack(fill=tk.X, padx=15, pady=10)
+
         self.mood_buttons = {}
-        mood_layout = tk.Frame(mood_frame, bg="#ecf0f1")
-        mood_layout.pack(padx=10, pady=10)
-        
+        mood_layout = tk.Frame(mood_frame, bg=Colors.BG_MAIN)
+        mood_layout.pack(padx=15, pady=10)
+
         for key, info in self.mood_manager.get_all_moods().items():
             btn = tk.Button(
                 mood_layout,
                 text=f"{info['icon']} {info['name']}",
                 command=lambda k=key: self._select_mood(k),
                 font=("Microsoft YaHei", 9),
-                bg="white",
-                fg="#2c3e50",
-                relief=tk.RAISED,
-                padx=10,
-                pady=5
+                bg=Colors.BG_SECONDARY,
+                fg=Colors.TEXT_PRIMARY,
+                relief=tk.FLAT,
+                padx=12,
+                pady=6,
+                cursor="hand2",
+                borderwidth=1,
+                highlightthickness=1,
+                highlightbackground=Colors.BORDER
             )
             btn.pack(side=tk.LEFT, padx=5)
+            btn.bind("<Enter>", lambda e, b=btn: b.config(bg=Colors.PRIMARY_LIGHT))
+            btn.bind("<Leave>", lambda e, b=btn: b.config(bg=Colors.BG_SECONDARY))
             self.mood_buttons[key] = btn
-        
+
         self._update_mood_buttons()
-        
+
+        # ==================== 聊天显示区 ====================
+        chat_container = tk.Frame(chat_frame, bg=Colors.BG_CHAT)
+        chat_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
+
         # 聊天记录显示区域
         self.chat_display = scrolledtext.ScrolledText(
-            chat_frame,
+            chat_container,
             wrap=tk.WORD,
             font=("Microsoft YaHei", 10),
-            bg="white",
-            fg="#2c3e50",
+            bg=Colors.BG_CHAT,
+            fg=Colors.TEXT_PRIMARY,
             padx=10,
-            pady=10
+            pady=10,
+            relief=tk.FLAT,
+            borderwidth=0,
+            highlightthickness=0
         )
-        self.chat_display.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.chat_display.pack(fill=tk.BOTH, expand=True)
         self.chat_display.config(state=tk.DISABLED)
 
-        # 输入区域
-        input_frame = tk.Frame(chat_frame, bg="#ecf0f1")
-        input_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+        # ==================== 输入区域 ====================
+        input_frame = tk.Frame(chat_frame, bg=Colors.BG_MAIN)
+        input_frame.pack(fill=tk.X, padx=15, pady=(0, 15))
+        input_frame.pack_propagate(False)
+        input_frame.config(height=120)
+
+        # 输入框
+        input_container = tk.Frame(input_frame, bg=Colors.BG_MAIN)
+        input_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
 
         tk.Label(
-            input_frame,
+            input_container,
             text="输入问题:",
-            font=("Microsoft YaHei", 10),
-            bg="#ecf0f1",
-            fg="#2c3e50"
-        ).pack(anchor=tk.W)
+            font=("Microsoft YaHei", 9, "bold"),
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY
+        ).pack(anchor=tk.W, pady=(0, 8))
 
         self.input_text = tk.Text(
-            input_frame,
-            height=4,
+            input_container,
+            height=3,
             font=("Microsoft YaHei", 10),
-            bg="white",
-            fg="#2c3e50",
-            padx=5,
-            pady=5
+            bg=Colors.BG_SECONDARY,
+            fg=Colors.TEXT_PRIMARY,
+            padx=12,
+            pady=10,
+            relief=tk.FLAT,
+            borderwidth=0,
+            highlightthickness=1,
+            highlightbackground=Colors.BORDER,
+            insertbackground=Colors.PRIMARY
         )
         self.input_text.pack(fill=tk.X, pady=5)
-        self.input_text.bind("<Return>", lambda e: self.send_message())
+        self.input_text.bind("<Return>", lambda e: self._on_enter_key(e))
+        self.input_text.bind("<Shift-Return>", lambda e: None)  # 允许换行
 
         # 按钮区域
-        button_frame = tk.Frame(input_frame, bg="#ecf0f1")
-        button_frame.pack(fill=tk.X, pady=5)
+        button_frame = tk.Frame(input_container, bg=Colors.BG_MAIN)
+        button_frame.pack(fill=tk.X, pady=(10, 0))
 
-        send_btn = tk.Button(
-            button_frame,
-            text="发送",
-            command=self.send_message,
-            font=("Microsoft YaHei", 10),
-            bg="#3498db",
-            fg="white",
-            relief=tk.FLAT,
-            padx=20,
-            pady=8
-        )
-        send_btn.pack(side=tk.RIGHT)
-
+        # 清空按钮
         clear_btn = tk.Button(
             button_frame,
-            text="清空",
+            text="🗑️ 清空",
             command=self.clear_chat,
-            font=("Microsoft YaHei", 10),
-            bg="#e74c3c",
-            fg="white",
+            font=("Microsoft YaHei", 9),
+            bg=Colors.BG_SECONDARY,
+            fg=Colors.TEXT_SECONDARY,
+            relief=tk.FLAT,
+            padx=15,
+            pady=8,
+            cursor="hand2"
+        )
+        clear_btn.pack(side=tk.LEFT)
+        clear_btn.bind("<Enter>", lambda e: clear_btn.config(bg=Colors.BORDER))
+        clear_btn.bind("<Leave>", lambda e: clear_btn.config(bg=Colors.BG_SECONDARY))
+
+        # 发送按钮
+        send_btn = tk.Button(
+            button_frame,
+            text="📤 发送",
+            command=self.send_message,
+            font=("Microsoft YaHei", 10, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.USER_TEXT,
+            relief=tk.FLAT,
+            padx=25,
+            pady=10,
+            cursor="hand2"
+        )
+        send_btn.pack(side=tk.RIGHT)
+        send_btn.bind("<Enter>", lambda e: send_btn.config(bg=Colors.PRIMARY_DARK))
+        send_btn.bind("<Leave>", lambda e: send_btn.config(bg=Colors.PRIMARY))
+
+    def _create_task_tab(self):
+        """创建任务标签页 - 豆包风格"""
+        task_frame = tk.Frame(self.notebook, bg=Colors.BG_CHAT)
+        self.notebook.add(task_frame, text="📋 任务")
+
+        # 任务输入区
+        input_frame = tk.LabelFrame(
+            task_frame, 
+            text="➕ 添加任务", 
+            font=("Microsoft YaHei", 9, "bold"), 
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            bd=1
+        )
+        input_frame.pack(fill=tk.X, padx=15, pady=10)
+
+        tk.Label(input_frame, text="任务标题:", bg=Colors.BG_MAIN, fg=Colors.TEXT_PRIMARY).grid(row=0, column=0, sticky=tk.W, padx=15, pady=10)
+        self.task_title = tk.Entry(input_frame, font=("Microsoft YaHei", 10), width=40, bg=Colors.BG_SECONDARY, fg=Colors.TEXT_PRIMARY, relief=tk.FLAT, highlightthickness=1, highlightbackground=Colors.BORDER)
+        self.task_title.grid(row=0, column=1, padx=15, pady=10)
+
+        tk.Label(input_frame, text="描述:", bg=Colors.BG_MAIN, fg=Colors.TEXT_PRIMARY).grid(row=1, column=0, sticky=tk.W, padx=15, pady=10)
+        self.task_desc = tk.Entry(input_frame, font=("Microsoft YaHei", 10), width=40, bg=Colors.BG_SECONDARY, fg=Colors.TEXT_PRIMARY, relief=tk.FLAT, highlightthickness=1, highlightbackground=Colors.BORDER)
+        self.task_desc.grid(row=1, column=1, padx=15, pady=10)
+
+        tk.Label(input_frame, text="优先级 (1-5):", bg=Colors.BG_MAIN, fg=Colors.TEXT_PRIMARY).grid(row=2, column=0, sticky=tk.W, padx=15, pady=10)
+        self.task_priority = ttk.Spinbox(input_frame, from_=1, to=5, width=10, font=("Microsoft YaHei", 10))
+        self.task_priority.set(3)
+        self.task_priority.grid(row=2, column=1, sticky=tk.W, padx=15, pady=10)
+
+        add_btn = tk.Button(
+            input_frame,
+            text="✓ 添加任务",
+            command=self._add_task,
+            font=("Microsoft YaHei", 10, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.USER_TEXT,
             relief=tk.FLAT,
             padx=20,
             pady=8
         )
-        clear_btn.pack(side=tk.RIGHT, padx=5)
+        add_btn.grid(row=3, column=1, sticky=tk.E, padx=15, pady=15)
 
-    def _create_task_tab(self):
-        """创建任务标签页"""
-        task_frame = tk.Frame(self.notebook, bg="#ecf0f1")
-        self.notebook.add(task_frame, text="📋 任务")
-        
-        # 任务输入区
-        input_frame = tk.LabelFrame(task_frame, text="添加任务", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
-        input_frame.pack(fill=tk.X, padx=10, pady=10)
-        
-        tk.Label(input_frame, text="任务标题:", bg="#ecf0f1").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
-        self.task_title = tk.Entry(input_frame, font=("Microsoft YaHei", 10), width=40)
-        self.task_title.grid(row=0, column=1, padx=5, pady=5)
-        
-        tk.Label(input_frame, text="描述:", bg="#ecf0f1").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
-        self.task_desc = tk.Entry(input_frame, font=("Microsoft YaHei", 10), width=40)
-        self.task_desc.grid(row=1, column=1, padx=5, pady=5)
-        
-        tk.Label(input_frame, text="优先级 (1-5):", bg="#ecf0f1").grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
-        self.task_priority = ttk.Spinbox(input_frame, from_=1, to=5, width=10, font=("Microsoft YaHei", 10))
-        self.task_priority.set(3)
-        self.task_priority.grid(row=2, column=1, sticky=tk.W, padx=5, pady=5)
-        
-        add_btn = tk.Button(
-            input_frame,
-            text="添加任务",
-            command=self._add_task,
-            font=("Microsoft YaHei", 10),
-            bg="#27ae60",
-            fg="white",
-            relief=tk.FLAT,
-            padx=15,
-            pady=5
-        )
-        add_btn.grid(row=3, column=1, sticky=tk.E, padx=5, pady=10)
-        
         # 任务列表区
-        list_frame = tk.LabelFrame(task_frame, text="任务列表", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
-        list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
+        list_frame = tk.LabelFrame(
+            task_frame, 
+            text="📝 任务列表", 
+            font=("Microsoft YaHei", 9, "bold"), 
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            bd=1
+        )
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
+
         # 筛选按钮
-        filter_frame = tk.Frame(list_frame, bg="#ecf0f1")
-        filter_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        tk.Label(filter_frame, text="筛选:", bg="#ecf0f1").pack(side=tk.LEFT)
+        filter_frame = tk.Frame(list_frame, bg=Colors.BG_MAIN)
+        filter_frame.pack(fill=tk.X, padx=15, pady=10)
+
+        tk.Label(filter_frame, text="筛选:", bg=Colors.BG_MAIN, fg=Colors.TEXT_SECONDARY).pack(side=tk.LEFT)
         self.task_filter = tk.StringVar(value="pending")
         for status, label in [("pending", "待完成"), ("in_progress", "进行中"), ("completed", "已完成"), ("all", "全部")]:
-            tk.Radiobutton(
+            rb = tk.Radiobutton(
                 filter_frame,
                 text=label,
                 variable=self.task_filter,
                 value=status,
-                bg="#ecf0f1",
-                command=self._refresh_task_list
-            ).pack(side=tk.LEFT, padx=5)
-        
+                bg=Colors.BG_MAIN,
+                fg=Colors.TEXT_PRIMARY,
+                selectcolor=Colors.PRIMARY_LIGHT,
+                activebackground=Colors.BG_MAIN,
+                activeforeground=Colors.PRIMARY
+            )
+            rb.pack(side=tk.LEFT, padx=10)
+
         # 任务列表
         columns = ("ID", "标题", "优先级", "状态", "截止")
         self.task_tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=10)
         for col in columns:
             self.task_tree.heading(col, text=col)
-            self.task_tree.column(col, width=100)
-        self.task_tree.column("标题", width=300)
-        self.task_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
+            self.task_tree.column(col, width=100, anchor=tk.CENTER)
+        self.task_tree.column("标题", width=300, anchor=tk.W)
+        self.task_tree.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
+
         # 操作按钮
-        op_frame = tk.Frame(list_frame, bg="#ecf0f1")
-        op_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        tk.Button(op_frame, text="刷新", command=self._refresh_task_list, bg="#3498db", fg="white").pack(side=tk.LEFT, padx=2)
-        tk.Button(op_frame, text="完成", command=self._complete_task, bg="#27ae60", fg="white").pack(side=tk.LEFT, padx=2)
-        tk.Button(op_frame, text="删除", command=self._delete_task, bg="#e74c3c", fg="white").pack(side=tk.LEFT, padx=2)
+        op_frame = tk.Frame(list_frame, bg=Colors.BG_MAIN)
+        op_frame.pack(fill=tk.X, padx=15, pady=10)
+
+        tk.Button(op_frame, text="🔄 刷新", command=self._refresh_task_list, bg=Colors.BG_SECONDARY, fg=Colors.TEXT_PRIMARY, relief=tk.FLAT, padx=15, pady=6).pack(side=tk.LEFT, padx=5)
+        tk.Button(op_frame, text="✓ 完成", command=self._complete_task, bg=Colors.SUCCESS, fg=Colors.USER_TEXT, relief=tk.FLAT, padx=15, pady=6).pack(side=tk.LEFT, padx=5)
+        tk.Button(op_frame, text="🗑️ 删除", command=self._delete_task, bg=Colors.ERROR, fg=Colors.USER_TEXT, relief=tk.FLAT, padx=15, pady=6).pack(side=tk.LEFT, padx=5)
 
     def _create_goal_tab(self):
-        """创建目标标签页"""
-        goal_frame = tk.Frame(self.notebook, bg="#ecf0f1")
+        """创建目标标签页 - 豆包风格"""
+        goal_frame = tk.Frame(self.notebook, bg=Colors.BG_CHAT)
         self.notebook.add(goal_frame, text="🎯 目标")
-        
+
         # 目标输入区
-        input_frame = tk.LabelFrame(goal_frame, text="添加目标", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
-        input_frame.pack(fill=tk.X, padx=10, pady=10)
-        
-        tk.Label(input_frame, text="目标标题:", bg="#ecf0f1").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
-        self.goal_title = tk.Entry(input_frame, font=("Microsoft YaHei", 10), width=40)
-        self.goal_title.grid(row=0, column=1, padx=5, pady=5)
-        
-        tk.Label(input_frame, text="描述:", bg="#ecf0f1").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
-        self.goal_desc = tk.Entry(input_frame, font=("Microsoft YaHei", 10), width=40)
-        self.goal_desc.grid(row=1, column=1, padx=5, pady=5)
-        
+        input_frame = tk.LabelFrame(
+            goal_frame, 
+            text="🎯 添加目标", 
+            font=("Microsoft YaHei", 9, "bold"), 
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            bd=1
+        )
+        input_frame.pack(fill=tk.X, padx=15, pady=10)
+
+        tk.Label(input_frame, text="目标标题:", bg=Colors.BG_MAIN, fg=Colors.TEXT_PRIMARY).grid(row=0, column=0, sticky=tk.W, padx=15, pady=10)
+        self.goal_title = tk.Entry(input_frame, font=("Microsoft YaHei", 10), width=40, bg=Colors.BG_SECONDARY, fg=Colors.TEXT_PRIMARY, relief=tk.FLAT, highlightthickness=1, highlightbackground=Colors.BORDER)
+        self.goal_title.grid(row=0, column=1, padx=15, pady=10)
+
+        tk.Label(input_frame, text="描述:", bg=Colors.BG_MAIN, fg=Colors.TEXT_PRIMARY).grid(row=1, column=0, sticky=tk.W, padx=15, pady=10)
+        self.goal_desc = tk.Entry(input_frame, font=("Microsoft YaHei", 10), width=40, bg=Colors.BG_SECONDARY, fg=Colors.TEXT_PRIMARY, relief=tk.FLAT, highlightthickness=1, highlightbackground=Colors.BORDER)
+        self.goal_desc.grid(row=1, column=1, padx=15, pady=10)
+
         add_btn = tk.Button(
             input_frame,
-            text="添加目标",
+            text="✓ 添加目标",
             command=self._add_goal,
-            font=("Microsoft YaHei", 10),
-            bg="#27ae60",
-            fg="white",
+            font=("Microsoft YaHei", 10, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.USER_TEXT,
             relief=tk.FLAT,
-            padx=15,
-            pady=5
+            padx=20,
+            pady=8
         )
-        add_btn.grid(row=2, column=1, sticky=tk.E, padx=5, pady=10)
-        
+        add_btn.grid(row=2, column=1, sticky=tk.E, padx=15, pady=15)
+
         # 目标列表区
-        list_frame = tk.LabelFrame(goal_frame, text="目标列表", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
-        list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
+        list_frame = tk.LabelFrame(
+            goal_frame, 
+            text="📊 目标列表", 
+            font=("Microsoft YaHei", 9, "bold"), 
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            bd=1
+        )
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
+
         columns = ("ID", "标题", "状态", "进度")
         self.goal_tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=8)
         for col in columns:
             self.goal_tree.heading(col, text=col)
-            self.goal_tree.column(col, width=150)
-        self.goal_tree.column("标题", width=400)
-        self.goal_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
+            self.goal_tree.column(col, width=150, anchor=tk.CENTER)
+        self.goal_tree.column("标题", width=400, anchor=tk.W)
+        self.goal_tree.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
+
         # 操作按钮
-        op_frame = tk.Frame(list_frame, bg="#ecf0f1")
-        op_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        tk.Button(op_frame, text="刷新", command=self._refresh_goal_list, bg="#3498db", fg="white").pack(side=tk.LEFT, padx=2)
-        tk.Button(op_frame, text="生成复盘", command=self._generate_review, bg="#9b59b6", fg="white").pack(side=tk.LEFT, padx=2)
+        op_frame = tk.Frame(list_frame, bg=Colors.BG_MAIN)
+        op_frame.pack(fill=tk.X, padx=15, pady=10)
+
+        tk.Button(op_frame, text="🔄 刷新", command=self._refresh_goal_list, bg=Colors.BG_SECONDARY, fg=Colors.TEXT_PRIMARY, relief=tk.FLAT, padx=15, pady=6).pack(side=tk.LEFT, padx=5)
+        tk.Button(op_frame, text="📈 生成复盘", command=self._generate_review, bg=Colors.WARNING, fg=Colors.USER_TEXT, relief=tk.FLAT, padx=15, pady=6).pack(side=tk.LEFT, padx=5)
 
     def _create_habit_tab(self):
-        """创建习惯标签页"""
-        habit_frame = tk.Frame(self.notebook, bg="#ecf0f1")
+        """创建习惯标签页 - 豆包风格"""
+        habit_frame = tk.Frame(self.notebook, bg=Colors.BG_CHAT)
         self.notebook.add(habit_frame, text="✅ 习惯")
-        
+
         # 习惯输入区
-        input_frame = tk.LabelFrame(habit_frame, text="添加习惯", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
-        input_frame.pack(fill=tk.X, padx=10, pady=10)
-        
-        tk.Label(input_frame, text="习惯名称:", bg="#ecf0f1").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
-        self.habit_name = tk.Entry(input_frame, font=("Microsoft YaHei", 10), width=30)
-        self.habit_name.grid(row=0, column=1, padx=5, pady=5)
-        
-        tk.Label(input_frame, text="频率:", bg="#ecf0f1").grid(row=0, column=2, sticky=tk.W, padx=5, pady=5)
+        input_frame = tk.LabelFrame(
+            habit_frame, 
+            text="✅ 添加习惯", 
+            font=("Microsoft YaHei", 9, "bold"), 
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            bd=1
+        )
+        input_frame.pack(fill=tk.X, padx=15, pady=10)
+
+        tk.Label(input_frame, text="习惯名称:", bg=Colors.BG_MAIN, fg=Colors.TEXT_PRIMARY).grid(row=0, column=0, sticky=tk.W, padx=15, pady=10)
+        self.habit_name = tk.Entry(input_frame, font=("Microsoft YaHei", 10), width=30, bg=Colors.BG_SECONDARY, fg=Colors.TEXT_PRIMARY, relief=tk.FLAT, highlightthickness=1, highlightbackground=Colors.BORDER)
+        self.habit_name.grid(row=0, column=1, padx=15, pady=10)
+
+        tk.Label(input_frame, text="频率:", bg=Colors.BG_MAIN, fg=Colors.TEXT_PRIMARY).grid(row=0, column=2, sticky=tk.W, padx=15, pady=10)
         self.habit_freq = ttk.Combobox(input_frame, values=["daily", "weekly"], width=10, font=("Microsoft YaHei", 10))
         self.habit_freq.set("daily")
-        self.habit_freq.grid(row=0, column=3, padx=5, pady=5)
-        
+        self.habit_freq.grid(row=0, column=3, padx=15, pady=10)
+
         add_btn = tk.Button(
             input_frame,
-            text="添加习惯",
+            text="✓ 添加习惯",
             command=self._add_habit,
-            font=("Microsoft YaHei", 10),
-            bg="#27ae60",
-            fg="white",
+            font=("Microsoft YaHei", 10, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.USER_TEXT,
             relief=tk.FLAT,
-            padx=15,
-            pady=5
+            padx=20,
+            pady=8
         )
-        add_btn.grid(row=1, column=3, sticky=tk.E, padx=5, pady=10)
-        
+        add_btn.grid(row=1, column=3, sticky=tk.E, padx=15, pady=15)
+
         # 习惯列表区
-        list_frame = tk.LabelFrame(habit_frame, text="习惯列表", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
-        list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
+        list_frame = tk.LabelFrame(
+            habit_frame, 
+            text="📅 习惯列表", 
+            font=("Microsoft YaHei", 9, "bold"), 
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            bd=1
+        )
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
+
         columns = ("名称", "频率", "连续天数", "总次数")
         self.habit_tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=8)
         for col in columns:
             self.habit_tree.heading(col, text=col)
-            self.habit_tree.column(col, width=150)
-        self.habit_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
+            self.habit_tree.column(col, width=150, anchor=tk.CENTER)
+        self.habit_tree.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
+
         # 操作按钮
-        op_frame = tk.Frame(list_frame, bg="#ecf0f1")
-        op_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        tk.Button(op_frame, text="刷新", command=self._refresh_habit_list, bg="#3498db", fg="white").pack(side=tk.LEFT, padx=2)
-        tk.Button(op_frame, text="打卡", command=self._habit_checkin, bg="#27ae60", fg="white").pack(side=tk.LEFT, padx=2)
-        tk.Button(op_frame, text="删除", command=self._delete_habit, bg="#e74c3c", fg="white").pack(side=tk.LEFT, padx=2)
+        op_frame = tk.Frame(list_frame, bg=Colors.BG_MAIN)
+        op_frame.pack(fill=tk.X, padx=15, pady=10)
+
+        tk.Button(op_frame, text="🔄 刷新", command=self._refresh_habit_list, bg=Colors.BG_SECONDARY, fg=Colors.TEXT_PRIMARY, relief=tk.FLAT, padx=15, pady=6).pack(side=tk.LEFT, padx=5)
+        tk.Button(op_frame, text="✓ 打卡", command=self._habit_checkin, bg=Colors.SUCCESS, fg=Colors.USER_TEXT, relief=tk.FLAT, padx=15, pady=6).pack(side=tk.LEFT, padx=5)
+        tk.Button(op_frame, text="🗑️ 删除", command=self._delete_habit, bg=Colors.ERROR, fg=Colors.USER_TEXT, relief=tk.FLAT, padx=15, pady=6).pack(side=tk.LEFT, padx=5)
 
     def _create_settings_tab(self):
-        """创建设置标签页（R3 更新）"""
-        settings_frame = tk.Frame(self.notebook, bg="#ecf0f1")
+        """创建设置标签页 - 豆包风格"""
+        settings_frame = tk.Frame(self.notebook, bg=Colors.BG_CHAT)
         self.notebook.add(settings_frame, text="⚙️ 设置")
-        
-        # R3 新增：系统配置区
-        sys_frame = tk.LabelFrame(settings_frame, text="🔧 系统配置 (R3)", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
-        sys_frame.pack(fill=tk.X, padx=10, pady=10)
-        
+
+        # 系统配置区
+        sys_frame = tk.LabelFrame(
+            settings_frame, 
+            text="🔧 系统配置", 
+            font=("Microsoft YaHei", 9, "bold"), 
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            bd=1
+        )
+        sys_frame.pack(fill=tk.X, padx=15, pady=10)
+
         # 内存配置
-        mem_frame = tk.Frame(sys_frame, bg="#ecf0f1")
-        mem_frame.pack(fill=tk.X, padx=10, pady=10)
-        
-        tk.Label(mem_frame, text="内存配置:", bg="#ecf0f1", font=("Microsoft YaHei", 10)).grid(row=0, column=0, padx=10, pady=10, sticky=tk.W)
+        mem_frame = tk.Frame(sys_frame, bg=Colors.BG_MAIN)
+        mem_frame.pack(fill=tk.X, padx=15, pady=15)
+
+        tk.Label(mem_frame, text="内存配置:", bg=Colors.BG_MAIN, font=("Microsoft YaHei", 10)).grid(row=0, column=0, padx=15, pady=10, sticky=tk.W)
         self.mem_var = tk.StringVar(value=str(self.memory_manager.selected_memory))
         mem_combo = ttk.Combobox(
-            mem_frame, 
-            textvariable=self.mem_var, 
-            values=["8", "16", "32", "64"], 
-            width=10, 
+            mem_frame,
+            textvariable=self.mem_var,
+            values=["8", "16", "32", "64"],
+            width=10,
             font=("Microsoft YaHei", 10),
             state="readonly"
         )
-        mem_combo.grid(row=0, column=1, padx=5, pady=10)
+        mem_combo.grid(row=0, column=1, padx=10, pady=10)
         mem_combo.bind("<<ComboboxSelected>>", lambda e: self._set_memory())
-        
-        tk.Label(mem_frame, text="GiB", bg="#ecf0f1", font=("Microsoft YaHei", 10)).grid(row=0, column=2, padx=5, pady=10, sticky=tk.W)
-        
+
+        tk.Label(mem_frame, text="GiB", bg=Colors.BG_MAIN, font=("Microsoft YaHei", 10)).grid(row=0, column=2, padx=5, pady=10, sticky=tk.W)
+
         # 预设选择
-        preset_frame = tk.Frame(sys_frame, bg="#ecf0f1")
-        preset_frame.pack(fill=tk.X, padx=10, pady=10)
-        
-        tk.Label(preset_frame, text="场景预设:", bg="#ecf0f1", font=("Microsoft YaHei", 10)).grid(row=0, column=0, padx=10, pady=10, sticky=tk.W)
-        
+        preset_frame = tk.Frame(sys_frame, bg=Colors.BG_MAIN)
+        preset_frame.pack(fill=tk.X, padx=15, pady=15)
+
+        tk.Label(preset_frame, text="场景预设:", bg=Colors.BG_MAIN, font=("Microsoft YaHei", 10)).grid(row=0, column=0, padx=15, pady=10, sticky=tk.W)
+
         self.preset_var = tk.StringVar(value=self.preset_manager.get_current_preset())
         preset_choices = [
             ("office", "💼 高效办公"),
@@ -451,56 +649,45 @@ class ZhangyChatGUI:
                 text=label,
                 variable=self.preset_var,
                 value=key,
-                bg="#ecf0f1",
+                bg=Colors.BG_MAIN,
                 font=("Microsoft YaHei", 10),
                 command=lambda k=key: self._set_preset(k)
             )
             rb.grid(row=0, column=i+1, padx=10, pady=10, sticky=tk.W)
-        
+
         # 数据管理区
-        data_frame = tk.LabelFrame(settings_frame, text="数据管理", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
-        data_frame.pack(fill=tk.X, padx=10, pady=10)
-        
-        btn_frame = tk.Frame(data_frame, bg="#ecf0f1")
-        btn_frame.pack(padx=10, pady=10)
-        
-        tk.Button(btn_frame, text="备份数据", command=self._backup_data, bg="#3498db", fg="white", width=15).pack(side=tk.LEFT, padx=5)
-        tk.Button(btn_frame, text="导出数据 (TXT)", command=lambda: self._export_data("txt"), bg="#3498db", fg="white", width=15).pack(side=tk.LEFT, padx=5)
-        tk.Button(btn_frame, text="导出数据 (Excel)", command=lambda: self._export_data("excel"), bg="#3498db", fg="white", width=15).pack(side=tk.LEFT, padx=5)
-        
-        # 界面设置区
-        ui_frame = tk.LabelFrame(settings_frame, text="界面设置", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
-        ui_frame.pack(fill=tk.X, padx=10, pady=10)
-        
-        tk.Label(ui_frame, text="主题:", bg="#ecf0f1", font=("Microsoft YaHei", 10)).grid(row=0, column=0, padx=10, pady=10)
-        self.theme_var = tk.StringVar(value="light")
-        ttk.Radiobutton(ui_frame, text="浅色", variable=self.theme_var, value="light").grid(row=0, column=1, padx=5)
-        ttk.Radiobutton(ui_frame, text="深色", variable=self.theme_var, value="dark").grid(row=0, column=2, padx=5)
-        
-        tk.Label(ui_frame, text="字体大小:", bg="#ecf0f1", font=("Microsoft YaHei", 10)).grid(row=1, column=0, padx=10, pady=10)
-        self.font_size = ttk.Spinbox(ui_frame, from_=8, to=16, width=10, font=("Microsoft YaHei", 10))
-        self.font_size.set(10)
-        self.font_size.grid(row=1, column=1, sticky=tk.W, padx=5, pady=10)
-        
-        apply_btn = tk.Button(
-            ui_frame,
-            text="应用设置",
-            command=self._apply_settings,
-            font=("Microsoft YaHei", 10),
-            bg="#27ae60",
-            fg="white",
+        data_frame = tk.LabelFrame(
+            settings_frame, 
+            text="💾 数据管理", 
+            font=("Microsoft YaHei", 9, "bold"), 
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY,
             relief=tk.FLAT,
-            padx=15,
-            pady=5
+            bd=1
         )
-        apply_btn.grid(row=2, column=1, sticky=tk.W, padx=5, pady=10)
-        
+        data_frame.pack(fill=tk.X, padx=15, pady=10)
+
+        btn_frame = tk.Frame(data_frame, bg=Colors.BG_MAIN)
+        btn_frame.pack(padx=15, pady=15)
+
+        tk.Button(btn_frame, text="📦 备份数据", command=self._backup_data, bg=Colors.PRIMARY, fg=Colors.USER_TEXT, relief=tk.FLAT, width=15, padx=15, pady=8).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="📄 导出 TXT", command=lambda: self._export_data("txt"), bg=Colors.BG_SECONDARY, fg=Colors.TEXT_PRIMARY, relief=tk.FLAT, width=15, padx=15, pady=8).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="📊 导出 Excel", command=lambda: self._export_data("excel"), bg=Colors.BG_SECONDARY, fg=Colors.TEXT_PRIMARY, relief=tk.FLAT, width=15, padx=15, pady=8).pack(side=tk.LEFT, padx=5)
+
         # 关于区
-        about_frame = tk.LabelFrame(settings_frame, text="关于", font=("Microsoft YaHei", 10, "bold"), bg="#ecf0f1")
-        about_frame.pack(fill=tk.X, padx=10, pady=10)
-        
+        about_frame = tk.LabelFrame(
+            settings_frame, 
+            text="ℹ️ 关于", 
+            font=("Microsoft YaHei", 9, "bold"), 
+            bg=Colors.BG_MAIN,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            bd=1
+        )
+        about_frame.pack(fill=tk.X, padx=15, pady=10)
+
         about_text = """
-Zhangy Chat R3 - 高效、专业的本地 AI 助手
+zhangy-chat R3 - 高效、专业的本地 AI 助手
 
 版本：3.0.0
 作者：zhangy
@@ -512,7 +699,7 @@ R3 新功能:
 • 4 类场景预设切换
 • 双界面无缝切换
 """
-        tk.Label(about_frame, text=about_text, bg="#ecf0f1", justify=tk.LEFT, font=("Microsoft YaHei", 9)).pack(padx=10, pady=10)
+        tk.Label(about_frame, text=about_text, bg=Colors.BG_MAIN, justify=tk.LEFT, font=("Microsoft YaHei", 9), fg=Colors.TEXT_SECONDARY).pack(padx=15, pady=15)
 
     def _load_initial_data(self):
         """加载初始数据"""
@@ -521,15 +708,15 @@ R3 新功能:
         self._refresh_habit_list()
         self._update_mood_buttons()
         self._update_preset_display()
-        
+
         # 显示欢迎消息
-        self._add_message("系统", f"欢迎使用 {self.name} R3！我是你的专属 AI 助手，有任何问题都可以问我。", "#27ae60")
+        self._add_message("system", f"欢迎使用 zhangy-chat R3！我是你的专属 AI 助手，有任何问题都可以问我。", "#00B365")
 
     def _switch_to_cmd(self):
         """切换到 CMD 模式"""
         if messagebox.askyesno("切换模式", "确定要切换到 CMD 模式吗？"):
             self.root.quit()
-            subprocess.Popen([sys.executable, "-m", "zhangy_chat.cmd_interface", "-cmd"])
+            subprocess.Popen([sys.executable, "main.py", "-cmd"])
 
     def send_message(self):
         """发送消息"""
@@ -538,29 +725,78 @@ R3 新功能:
             return
 
         self.input_text.delete("1.0", tk.END)
-        self._add_message("用户", user_input, "#3498db")
-        self.status_label.config(text="正在思考...")
-        
+        self._add_message("user", user_input, Colors.USER_BG)
+        self.status_label.config(text="⏳ 正在思考...")
+
         thread = threading.Thread(target=self._process_response, args=(user_input,))
+        thread.daemon = True
         thread.start()
 
     def _process_response(self, user_input):
         """处理响应"""
         try:
             response = self.assistant.chat(user_input)
-            self.root.after(0, lambda: self._add_message(self.name, response, "#2c3e50"))
+            # 移除 "zhangy-chat:" 前缀（如果有）
+            if response.startswith("zhangy-chat:"):
+                response = response.replace("zhangy-chat:", "").strip()
+            self.root.after(0, lambda: self._add_message("ai", response, Colors.AI_TEXT))
         except Exception as e:
-            self.root.after(0, lambda: self._add_message("系统", f"错误：{str(e)}", "#e74c3c"))
+            self.root.after(0, lambda: self._add_message("system", f"错误：{str(e)}", Colors.ERROR))
         finally:
-            self.root.after(0, lambda: self.status_label.config(text="就绪"))
+            self.root.after(0, lambda: self.status_label.config(text="✓ 就绪"))
+
+    def _on_enter_key(self, event):
+        """处理回车键发送"""
+        if not event.state & 0x1:  # 没有按 Shift
+            self.send_message()
+            return "break"
 
     def _add_message(self, sender, message, color):
-        """添加消息到聊天记录"""
+        """添加消息到聊天记录 - 豆包风格气泡"""
         self.chat_display.config(state=tk.NORMAL)
-        self.chat_display.insert(tk.END, f"\n{sender}:\n", ("sender",))
-        self.chat_display.insert(tk.END, f"{message}\n\n", ("message",))
-        self.chat_display.tag_config("sender", font=("Microsoft YaHei", 10, "bold"), foreground=color)
-        self.chat_display.tag_config("message", font=("Microsoft YaHei", 10), foreground="#2c3e50")
+        
+        if sender == "user":
+            # 用户消息 - 右侧蓝色气泡
+            self.chat_display.insert(tk.END, "\n")
+            self.chat_display.insert(tk.END, f"  {message}\n\n", "user_bubble")
+            self.chat_display.tag_config("user_bubble", 
+                                         font=("Microsoft YaHei", 10), 
+                                         foreground=Colors.USER_TEXT,
+                                         background=Colors.USER_BG,
+                                         lmargin1=400,
+                                         lmargin2=400,
+                                         rmargin=20,
+                                         spacing1=10,
+                                         spacing3=10,
+                                         borderwidth=0)
+        elif sender == "ai":
+            # AI 消息 - 左侧白色气泡
+            self.chat_display.insert(tk.END, "\n")
+            self.chat_display.insert(tk.END, f"zhangy-chat:\n", "ai_sender")
+            self.chat_display.insert(tk.END, f"{message}\n\n", "ai_message")
+            self.chat_display.tag_config("ai_sender", 
+                                         font=("Microsoft YaHei", 10, "bold"), 
+                                         foreground=Colors.PRIMARY,
+                                         lmargin1=20,
+                                         rmargin=400)
+            self.chat_display.tag_config("ai_message", 
+                                         font=("Microsoft YaHei", 10), 
+                                         foreground=Colors.AI_TEXT,
+                                         lmargin1=20,
+                                         rmargin=400,
+                                         spacing1=5,
+                                         spacing3=5)
+        elif sender == "system":
+            # 系统消息 - 居中绿色
+            self.chat_display.insert(tk.END, "\n")
+            self.chat_display.insert(tk.END, f"  {message}  \n\n", "system_bubble")
+            self.chat_display.tag_config("system_bubble", 
+                                         font=("Microsoft YaHei", 9), 
+                                         foreground=Colors.SUCCESS,
+                                         justify=tk.CENTER,
+                                         lmargin1=200,
+                                         rmargin=200)
+        
         self.chat_display.see(tk.END)
         self.chat_display.config(state=tk.DISABLED)
 
@@ -569,8 +805,9 @@ R3 新功能:
         self.chat_display.config(state=tk.NORMAL)
         self.chat_display.delete("1.0", tk.END)
         self.chat_display.config(state=tk.DISABLED)
+        self.chat_history = []
 
-    # R3 新增方法
+    # R3 方法
     def _select_mood(self, mood_key):
         """选择心情"""
         result = self.mood_manager.set_mood(mood_key)
@@ -580,16 +817,16 @@ R3 新功能:
             messagebox.showinfo("心情切换", result['message'])
         else:
             messagebox.showwarning("提示", result['message'])
-    
+
     def _update_mood_buttons(self):
         """更新心情按钮状态"""
         current = self.mood_manager.get_current_mood()
         for key, btn in self.mood_buttons.items():
             if key == current:
-                btn.config(bg="#3498db", fg="white", relief=tk.SUNKEN)
+                btn.config(bg=Colors.PRIMARY_LIGHT, fg=Colors.PRIMARY, relief=tk.FLAT)
             else:
-                btn.config(bg="white", fg="#2c3e50", relief=tk.RAISED)
-    
+                btn.config(bg=Colors.BG_SECONDARY, fg=Colors.TEXT_PRIMARY, relief=tk.FLAT)
+
     def _set_memory(self):
         """设置内存配置"""
         try:
@@ -601,7 +838,7 @@ R3 新功能:
                 messagebox.showwarning("内存配置", result['message'])
         except ValueError:
             messagebox.showerror("错误", "无效的内存配置")
-    
+
     def _set_preset(self, preset_key):
         """设置预设"""
         result = self.preset_manager.set_preset(preset_key)
@@ -611,27 +848,27 @@ R3 新功能:
             messagebox.showinfo("预设切换", result['message'])
         else:
             messagebox.showwarning("预设切换", result['message'])
-    
+
     def _update_preset_display(self):
         """更新预设显示"""
         current = self.preset_manager.get_current_preset()
         self.preset_var.set(current)
-    
+
     def _update_tip(self):
         """更新每日小贴士"""
         self.tip_label.config(text=self.assistant.get_daily_tip())
 
-    # 任务相关方法（保持原有）
+    # 任务相关方法
     def _add_task(self):
         """添加任务"""
         title = self.task_title.get().strip()
         desc = self.task_desc.get().strip()
         priority = int(self.task_priority.get())
-        
+
         if not title:
             messagebox.showwarning("提示", "请输入任务标题")
             return
-        
+
         task = self.task_manager.add_task(title, desc, priority)
         messagebox.showinfo("成功", f"任务已添加 [ID: {task.id}]")
         self.task_title.delete(0, tk.END)
@@ -642,10 +879,10 @@ R3 新功能:
         """刷新任务列表"""
         for item in self.task_tree.get_children():
             self.task_tree.delete(item)
-        
+
         status = self.task_filter.get()
         tasks = self.task_manager.get_tasks(status=None if status == "all" else status)
-        
+
         status_map = {"pending": "待完成", "in_progress": "进行中", "completed": "已完成", "cancelled": "已取消"}
         for task in tasks:
             self.task_tree.insert("", tk.END, values=(
@@ -686,11 +923,11 @@ R3 新功能:
         """添加目标"""
         title = self.goal_title.get().strip()
         desc = self.goal_desc.get().strip()
-        
+
         if not title:
             messagebox.showwarning("提示", "请输入目标标题")
             return
-        
+
         goal = self.task_manager.add_goal(title, desc)
         messagebox.showinfo("成功", f"目标已添加 [ID: {goal.id}]")
         self.goal_title.delete(0, tk.END)
@@ -701,7 +938,7 @@ R3 新功能:
         """刷新目标列表"""
         for item in self.goal_tree.get_children():
             self.goal_tree.delete(item)
-        
+
         goals = self.task_manager.get_goals()
         for goal in goals:
             progress = goal.get_progress()
@@ -715,30 +952,29 @@ R3 新功能:
     def _generate_review(self):
         """生成复盘报告"""
         review = self.task_manager.generate_review(7)
-        
+
         review_window = tk.Toplevel(self.root)
         review_window.title("复盘报告")
         review_window.geometry("600x500")
-        
-        text = scrolledtext.ScrolledText(review_window, font=("Microsoft YaHei", 10))
-        text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        content = f"""复盘报告：{review['period']}
-{'='*40}
+        review_window.configure(bg=Colors.BG_MAIN)
 
-✅ 完成任务：{review['completed_tasks']} 个
-"""
+        text = scrolledtext.ScrolledText(review_window, font=("Microsoft YaHei", 10), bg=Colors.BG_SECONDARY, fg=Colors.TEXT_PRIMARY, relief=tk.FLAT)
+        text.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+        content = f"""复盘报告：{review['period']}
+{'='*40}\n\n"""
+        content += f"✅ 完成任务：{review['completed_tasks']} 个\n"
         for task in review['task_details'][:5]:
             content += f"   - {task['title']}\n"
-        
+
         content += f"\n🎯 进行中目标：{review['active_goals']} 个\n"
         for goal in review['goal_progress']:
             content += f"   - {goal['title']}: {goal['progress']:.0f}%\n"
-        
+
         content += f"\n📊 习惯打卡:\n"
         for habit in review['habits_summary']:
             content += f"   - {habit['title']}: 连续{habit['streak']}天，总计{habit['total']}次\n"
-        
+
         text.insert(tk.END, content)
         text.config(state=tk.DISABLED)
 
@@ -747,11 +983,11 @@ R3 新功能:
         """添加习惯"""
         name = self.habit_name.get().strip()
         freq = self.habit_freq.get()
-        
+
         if not name:
             messagebox.showwarning("提示", "请输入习惯名称")
             return
-        
+
         habit = self.task_manager.add_habit(name, freq)
         messagebox.showinfo("成功", f"习惯已添加 [ID: {habit.id}]")
         self.habit_name.delete(0, tk.END)
@@ -761,7 +997,7 @@ R3 新功能:
         """刷新习惯列表"""
         for item in self.habit_tree.get_children():
             self.habit_tree.delete(item)
-        
+
         habits = self.task_manager.get_habits()
         for habit in habits:
             self.habit_tree.insert("", tk.END, values=(
@@ -779,7 +1015,7 @@ R3 新功能:
             return
         item = self.habit_tree.item(selected[0])
         habit_name = item["values"][0]
-        
+
         for habit in self.task_manager.get_habits():
             if habit.title == habit_name:
                 if self.task_manager.habit_check_in(habit.id):
@@ -825,18 +1061,6 @@ R3 新功能:
             messagebox.showinfo("成功", f"数据已导出:\n{path}")
         except Exception as e:
             messagebox.showerror("错误", f"导出失败：{e}")
-
-    def _apply_settings(self):
-        """应用设置"""
-        if self.theme_var.get() == "dark":
-            self.root.configure(bg="#2c3e50")
-        else:
-            self.root.configure(bg="#ecf0f1")
-        
-        font_size = int(self.font_size.get())
-        self.chat_display.config(font=("Microsoft YaHei", font_size))
-        
-        messagebox.showinfo("成功", "设置已应用")
 
 
 def main():

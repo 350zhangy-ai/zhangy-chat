@@ -1,41 +1,110 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-AI 助手核心模块 - R4 实用版
-啥问题都能答，不再套模板
+AI 助手核心模块 - R3 版本
+像人一样思考，有温度的 AI 助手
 """
 
+import random
 from typing import Optional, Dict
-from .logic_engine import LogicEngine
-from .emotion_engine import EmotionEngine
-from .reasoning_engine import ReasoningEngine
+from datetime import datetime
 
 
 class Assistant:
-    """AI 助手类 (R4 实用版)"""
+    """AI 助手类 (R3 版本 - zhangy-chat)"""
 
-    def __init__(self, config: Optional[Dict] = None, 
+    def __init__(self, config: Optional[Dict] = None,
                  mood_manager=None, preset_manager=None,
                  memory_manager=None):
         self.config = config or {}
-        self.name = self.config.get('personality', {}).get('name', 'zhangy')
-        
-        # 管理器
+        self.name = "zhangy-chat"
+
+        # R3 管理器
         self.mood_manager = mood_manager
         self.preset_manager = preset_manager
         self.memory_manager = memory_manager
-        
-        # 引擎
-        self.logic_engine = LogicEngine()
-        self.emotion_engine = EmotionEngine()
-        self.reasoning_engine = ReasoningEngine()  # R5 新增推理引擎
-        
-        # 超大全实用回复库 - 覆盖生活各方面
-        self.practical_responses = {
-            # 饮食类
-            "饿": {
-                "keywords": ["饿", "吃饭", "吃东西", "肚子", "食堂", "外卖", "做饭", "早餐", "午餐", "晚餐"],
-                "response": """## 吃饭建议
+
+        # 知识库 - 让 AI 能回答各种问题
+        self.knowledge_base = self._init_knowledge_base()
+
+        # 对话风格配置
+        self.response_style = {
+            "prefix": "",  # 心情前缀
+            "suffix": "",  # 心情后缀
+            "emoji": True  # 是否使用表情
+        }
+
+    def _init_knowledge_base(self) -> Dict:
+        """初始化知识库 - 覆盖生活各方面"""
+        return {
+            # ==================== 饮食类 ====================
+            "饮食": {
+                "keywords": ["饿", "吃饭", "吃啥", "做饭", "外卖", "食堂", "早餐", "午餐", "晚餐", "夜宵", "减肥餐"],
+                "response": self._get_food_response
+            },
+            # ==================== 编程类 ====================
+            "编程": {
+                "keywords": ["编程", "代码", "python", "java", "javascript", "写程序", "bug", "报错", "开发", "程序员", "git", "github"],
+                "response": self._get_coding_response
+            },
+            # ==================== 工作类 ====================
+            "工作": {
+                "keywords": ["工作", "上班", "辞职", "跳槽", "面试", "老板", "同事", "加班", "工资", "涨薪", "离职"],
+                "response": self._get_work_response
+            },
+            # ==================== 学习类 ====================
+            "学习": {
+                "keywords": ["学习", "考试", "考研", "考证", "复习", "备考", "挂科", "奖学金", "留学"],
+                "response": self._get_study_response
+            },
+            # ==================== 情感类 ====================
+            "情感": {
+                "keywords": ["喜欢", "暗恋", "表白", "恋爱", "对象", "单身", "分手", "复合", "相亲", "结婚"],
+                "response": self._get_love_response
+            },
+            # ==================== 健康类 ====================
+            "健康": {
+                "keywords": ["健康", "运动", "减肥", "健身", "生病", "感冒", "头疼", "发烧", "失眠", "脱发", "熬夜"],
+                "response": self._get_health_response
+            },
+            # ==================== 购物类 ====================
+            "购物": {
+                "keywords": ["购物", "买", "推荐", "淘宝", "京东", "拼多多", "手机", "电脑", "数码"],
+                "response": self._get_shopping_response
+            },
+            # ==================== 旅行类 ====================
+            "旅行": {
+                "keywords": ["旅行", "旅游", "出去玩", "景点", "酒店", "机票", "高铁", "攻略", "签证"],
+                "response": self._get_travel_response
+            },
+            # ==================== 情绪类 ====================
+            "情绪": {
+                "keywords": ["累", "辛苦", "困", "疲惫", "压力", "焦虑", "担心", "害怕", "紧张", "崩溃", "烦", "郁闷"],
+                "response": self._get_emotion_response
+            },
+            # ==================== 无聊类 ====================
+            "无聊": {
+                "keywords": ["无聊", "没事干", "闲", "打发时间", "剧荒", "游戏"],
+                "response": self._get_boredom_response
+            },
+            # ==================== 金钱类 ====================
+            "金钱": {
+                "keywords": ["钱", "存款", "理财", "基金", "股票", "借钱", "还钱", "信用卡", "贷款"],
+                "response": self._get_money_response
+            },
+            # ==================== 人际类 ====================
+            "人际": {
+                "keywords": ["朋友", "社交", "孤独", "孤单", "寂寞", "合不来", "矛盾", "吵架"],
+                "response": self._get_social_response
+            },
+        }
+
+    # ==================== 各类回复生成器 ====================
+
+    def _get_food_response(self, query: str) -> str:
+        """饮食类回复"""
+        responses = [
+            """## 🍽️ 吃饭建议
 
 **快速解决**:
 - 点外卖：美团/饿了么，30 分钟送到
@@ -47,39 +116,40 @@ class Assistant:
 - 沙拉 + 鸡胸：减脂期首选
 - 杂粮饭 + 蔬菜：饱腹感强
 
+想好吃啥了吗？""",
+            """## 🍜 干饭人指南
+
 **不知道吃啥？试试**:
 1. 打开外卖软件看推荐
 2. 想想昨天吃了啥，换换口味
 3. 问问朋友吃的啥
 
-想好吃啥了吗？"""
-            },
-            # 命令类
-            "命令": {
-                "keywords": ["python main", "pip install", "npm install", "git ", "cmd", "终端", "命令行"],
-                "response": """## 命令行帮助
+**营养搭配**:
+- 蛋白质：肉/蛋/奶/豆制品
+- 碳水：米饭/面条/杂粮
+- 维生素：蔬菜水果
 
-**常见命令**:
-- `python main.py` - 运行 Python 程序
-- `pip install 包名` - 安装 Python 依赖
-- `git clone 地址` - 克隆代码仓库
-- `git status` - 查看 git 状态
+别凑合，好好吃饭～""",
+            """## 🥗 饮食小贴士
 
-**遇到问题**:
-- 权限错误：用管理员身份运行
-- 找不到命令：检查是否安装/配置环境变量
-- 报错：看错误信息最后一行
+**早餐**: 鸡蛋 + 牛奶 + 主食（包子/面包）
+**午餐**: 肉 + 菜 + 饭，七分饱
+**晚餐**: 清淡为主，别太晚
 
-具体遇到啥命令问题了？"""
-            },
-            # 编程类
-            "编程": {
-                "keywords": ["编程", "代码", "python 学习", "java 学习", "写程序", "开发", "bug", "报错", "程序员"],
-                "response": """## 编程建议
+**少吃**: 油炸、高糖、加工食品
+**多喝**: 温水，每天 1.5-2L
+
+今天打算吃啥好吃的？""",
+        ]
+        return random.choice(responses)
+
+    def _get_coding_response(self, query: str) -> str:
+        """编程类回复"""
+        return """## 💻 编程建议
 
 **学习路线**:
 - 入门：Python（语法简单，应用广）
-- 前端：HTML/CSS -> JavaScript -> Vue/React
+- 前端：HTML/CSS → JavaScript → Vue/React
 - 后端：Java/Go/Node.js + 数据库
 - 数据：Python + SQL + 机器学习
 
@@ -91,14 +161,12 @@ class Assistant:
 **接私活**:
 - 猪八戒网、程序员客栈
 - 先从小项目开始，积累口碑
-- 报价别太低，不然累死还不赚钱
 
 具体遇到啥问题了？说说看～"""
-            },
-            # 工作类
-            "工作": {
-                "keywords": ["工作", "上班", "职场", "老板", "同事", "加班", "辞职", "跳槽", "面试", "工资"],
-                "response": """##  工作建议
+
+    def _get_work_response(self, query: str) -> str:
+        """工作类回复"""
+        return """## 💼 工作建议
 
 **职场生存**:
 - 少说话多做事，尤其是新人
@@ -121,11 +189,10 @@ class Assistant:
 - 身体最重要，别硬撑
 
 工作上遇到啥事了？可以跟我吐槽～"""
-            },
-            # 学习类
-            "学习": {
-                "keywords": ["学习", "考试", "复习", "备考", "考研", "考证", "挂科", "奖学金"],
-                "response": """##  学习建议
+
+    def _get_study_response(self, query: str) -> str:
+        """学习类回复"""
+        return """## 📚 学习建议
 
 **高效方法**:
 - 番茄钟：25 分钟专注 +5 分钟休息
@@ -142,19 +209,12 @@ class Assistant:
 - 确定目标院校和专业
 - 英语和政治要过线
 - 专业课是拉分关键
-- 报不报班看自律能力
-
-**考证**:
-- 英语四六级必考
-- 计算机二级有用
-- 专业证书看行业需求
 
 在准备啥考试？我可以帮你规划～"""
-            },
-            # 情感类
-            "情感": {
-                "keywords": ["喜欢", "暗恋", "表白", "恋爱", "对象", "单身", "分手", "复合", "相亲"],
-                "response": """##  情感建议
+
+    def _get_love_response(self, query: str) -> str:
+        """情感类回复"""
+        return """## 💕 情感建议
 
 **暗恋阶段**:
 - 先当朋友处，多接触多了解
@@ -176,17 +236,11 @@ class Assistant:
 - 时间会治愈一切
 - 下一个会更好
 
-**单身**:
-- 先过好自己，花若盛开蝴蝶自来
-- 多参加社交活动，扩大圈子
-- 别将就，宁缺毋滥
-
 感情方面遇到啥问题了？"""
-            },
-            # 健康类
-            "健康": {
-                "keywords": ["健康", "运动", "减肥", "健身", "生病", "感冒", "头疼", "发烧", "失眠", "脱发"],
-                "response": """##  健康建议
+
+    def _get_health_response(self, query: str) -> str:
+        """健康类回复"""
+        return """## 🏃 健康建议
 
 **减肥**:
 - 管住嘴比迈开腿重要
@@ -208,16 +262,14 @@ class Assistant:
 - 感冒：多喝水，维 C 泡腾片
 - 头疼：休息，别硬撑
 - 失眠：泡脚、喝牛奶、听轻音乐
-- 脱发：少熬夜，用生姜洗发水
 
 *严重的话一定要去医院*
 
 最近身体哪里不舒服？"""
-            },
-            # 购物类
-            "购物": {
-                "keywords": ["购物", "买", "推荐", "好物", "淘宝", "京东", "拼多多", "手机", "电脑"],
-                "response": """##  购物建议
+
+    def _get_shopping_response(self, query: str) -> str:
+        """购物类回复"""
+        return """## 🛒 购物建议
 
 **买前思考**:
 1. 真的需要吗？
@@ -230,22 +282,16 @@ class Assistant:
 - 返利 APP：能省一点是一点
 - 二手平台：闲鱼淘好物
 
-**避坑**:
-- 看差评，别看好评
-- 注意退换货政策
-- 警惕"限时抢购"套路
-
 **数码产品**:
 - 手机：苹果/华为/小米看预算
 - 电脑：办公选轻薄本，游戏选游戏本
 - 别买太便宜的，容易踩坑
 
 想买啥？我帮你参谋参谋～"""
-            },
-            # 旅行类
-            "旅行": {
-                "keywords": ["旅行", "旅游", "出去玩", "景点", "酒店", "机票", "高铁", "攻略"],
-                "response": """## ✈️ 旅行建议
+
+    def _get_travel_response(self, query: str) -> str:
+        """旅行类回复"""
+        return """## ✈️ 旅行建议
 
 **目的地选择**:
 - 预算少：周边城市/省内
@@ -262,19 +308,53 @@ class Assistant:
 - 证件：身份证/学生证
 - 电子：充电宝、充电器
 - 药品：感冒药、肠胃药、创可贴
-- 衣物：查好天气再带
-
-**攻略制作**:
-1. 确定想去的地方
-2. 按区域分组，减少路途
-3. 别排太满，留休息时间
 
 想去哪玩？我可以帮你做攻略～"""
-            },
-            # 无聊类
-            "无聊": {
-                "keywords": ["无聊", "没事干", "闲", "打发时间", "剧荒", "游戏"],
-                "response": """##  无聊时可以做的事
+
+    def _get_emotion_response(self, query: str) -> str:
+        """情绪类回复"""
+        # 根据心情调整语气
+        if self.mood_manager and self.mood_manager.is_empathetic_mode():
+            return """## 💚 情绪疏导
+
+我懂你现在的感受，真的。
+
+这种时候别一个人扛着，说出来会好受点。
+
+**可以试试这样做**:
+1. 先深呼吸几次，让自己缓一缓
+2. 找信任的人聊聊，别憋着
+3. 出去走走，换个环境
+
+**即时缓解**:
+- 深呼吸：吸气 4 秒，憋气 7 秒，呼气 8 秒
+- 听点轻音乐，放松一下
+- 洗个热水澡，好好睡一觉
+
+记住：你不是一个人，有需要随时找我～"""
+
+        return """## 💚 情绪疏导
+
+**即时缓解**:
+- 深呼吸：吸气 4 秒，憋气 7 秒，呼气 8 秒
+- 出去走走，换个环境
+- 找人聊聊，别憋着
+
+**长期调节**:
+- 运动：跑步、游泳、瑜伽
+- 冥想：每天 10 分钟
+- 保证睡眠
+
+**调整心态**:
+- 很多事没你想的那么严重
+- 别追求完美，够好就行
+- 你已经在努力了，这很重要
+
+压力大的时候记得找我聊聊～"""
+
+    def _get_boredom_response(self, query: str) -> str:
+        """无聊类回复"""
+        return """## 🎮 无聊时可以做的事
 
 **宅家**:
 - 刷剧：豆瓣高分榜照着看
@@ -297,70 +377,10 @@ class Assistant:
 - 看纪录片涨知识
 
 想干啥类型的？我帮你具体推荐～"""
-            },
-            # 累类
-            "累": {
-                "keywords": ["累", "辛苦", "困", "乏", "疲惫", "熬夜", "透支"],
-                "response": """##  累了就休息休息
 
-**快速恢复**:
-- 小睡 20 分钟
-- 洗个热水澡
-- 听点轻音乐
-- 出去走走，呼吸新鲜空气
-
-**长期调节**:
-- 保证睡眠，别熬夜
-- 适当运动，出出汗
-- 周末彻底放松一天
-- 定期休假，别连轴转
-
-**心理调节**:
-- 别给自己太大压力
-- 该躺平的时候就躺平
-- 工作不是生活的全部
-- 学会拒绝，别什么都接
-
-**熬夜**:
-- 偶尔熬夜没事，别长期
-- 熬夜后补觉 + 多喝水
-- 第二天别开车，容易出事
-
-最近是不是太辛苦了？好好休息休息吧～"""
-            },
-            # 压力类
-            "压力": {
-                "keywords": ["压力", "焦虑", "紧张", "担心", "害怕", "崩溃"],
-                "response": """##  压力大的时候
-
-**即时缓解**:
-- 深呼吸：吸气 4 秒，憋气 7 秒，呼气 8 秒
-- 出去走走，换个环境
-- 找人聊聊，别憋着
-- 哭出来不丢人
-
-**长期调节**:
-- 运动：跑步、游泳、瑜伽
-- 冥想：每天 10 分钟
-- 保证睡眠
-- 培养爱好
-
-**调整心态**:
-- 很多事没你想的那么严重
-- 别追求完美，够好就行
-- 你已经在努力了，这很重要
-
-**寻求帮助**:
-- 找朋友家人聊聊
-- 必要时看心理咨询师
-- 心理热线：12355（青少年）
-
-记住：你不是一个人，有需要随时找我～"""
-            },
-            # 金钱类
-            "金钱": {
-                "keywords": ["钱", "工资", "存款", "理财", "基金", "股票", "借钱", "还钱"],
-                "response": """##  金钱建议
+    def _get_money_response(self, query: str) -> str:
+        """金钱类回复"""
+        return """## 💰 金钱建议
 
 **存钱**:
 - 每月强制存 20%-30%
@@ -373,56 +393,69 @@ class Assistant:
 - 基金：定投指数基金，长期持有
 - 股票：风险高，别 All in
 
-**借钱**:
-- 借急不借穷
-- 写好借条
-- 做好要不回来的准备
-
 **消费**:
 - 大额消费等 3 天再决定
 - 办卡要谨慎
 - 别碰网贷
 
 有具体理财问题可以问我～"""
-            }
-        }
-        
-        # 简单对话库 + 危机干预
-        self.simple_queries = {
-            # 危机干预 - 最高优先级
-            "我想死": """我真的很担心你。
 
-我知道你现在一定很难受，不然不会说出这样的话。
-但请相信，再难的事情都会过去的，你的生命比什么都重要。
+    def _get_social_response(self, query: str) -> str:
+        """人际类回复"""
+        return """## 🤝 社交建议
 
-**可以试试这样做**:
-1. 先深呼吸几次，让自己缓一缓
-2. 找信任的人聊聊，别一个人扛着
-3. 出去走走，换个环境
+**交朋友**:
+- 参加兴趣活动，认识志同道合的人
+- 主动一点，先从打招呼开始
+- 真诚待人，别太功利
 
-**专业帮助**:
-- 心理援助热线：400-161-9995（24 小时）
-- 北京心理危机干预中心：010-82951332
-- 青少年心理热线：12355
+**处理矛盾**:
+- 冷静下来再沟通
+- 换位思考，理解对方
+- 该道歉就道歉，别硬撑
 
-你不是一个人，还有人在乎你。
-如果需要聊聊，我随时都在。""",
-            "不想活了": """我很担心你的状态。
+**独处**:
+- 一个人不等于孤独
+- 培养爱好，充实自己
+- 享受独处的时光
 
-这种感受一定很不好受，但请给自己一个机会，也给关心你的人一个机会。
+**社交焦虑**:
+- 从小圈子开始
+- 不用讨好所有人
+- 做真实的自己
 
-**现在可以做**:
-1. 联系信任的家人或朋友
-2. 拨打心理援助热线：400-161-9995
-3. 去最近的医院心理科
+遇到啥社交问题了？说说看～"""
 
-你很重要，这个世界需要你。""",
-            # 系统/数据类
-            "数据流": "我现在是本地运行，没有云端数据流。所有数据都存在你电脑上的 data 文件夹里，不会上传到任何地方。",
-            "你的数据": "我的数据都在本地：1) 任务/目标存在 data/tasks.json 2) 情感记忆存在 data/emotion_memory.json 3) 配置在 config.yaml。都在你电脑上，很安全。",
-            "你是谁做的": "我是 zhangy 开发的本地 AI 助手，运行在你自己的电脑上，不依赖任何云端服务。",
-            "你有 api 吗": "我没有 API，所有功能都是本地运行的。这样的好处是数据不会外泄，隐私更安全。",
-            # 日常对话
+    # ==================== 主对话方法 ====================
+
+    def chat(self, query: str) -> str:
+        """
+        通用对话 - 像人一样思考
+
+        Args:
+            query: 用户问题
+
+        Returns:
+            zhangy-chat 的回复
+        """
+        # 1. 检查简单对话
+        simple_response = self._check_simple_query(query)
+        if simple_response:
+            return f"zhangy-chat：{simple_response}"
+
+        # 2. 检查知识库匹配
+        for category, data in self.knowledge_base.items():
+            for keyword in data["keywords"]:
+                if keyword in query:
+                    response = data["response"](query)
+                    return f"zhangy-chat：{self._apply_mood_style(response)}"
+
+        # 3. 通用回复 - 像人一样思考
+        return self._thoughtful_response(query)
+
+    def _check_simple_query(self, query: str) -> Optional[str]:
+        """检查简单对话"""
+        simple_responses = {
             "你叫什么": f"我叫 {self.name}，是你的专属 AI 助手～",
             "你是谁": f"我是 {self.name}，一个本地 AI 助手，可以帮你管理任务、规划目标、聊天解闷～",
             "你能做什么": "我能帮你：1) 管理任务和 goal 2) 解答各种问题 3) 聊天解闷 4) 给建议。有啥需要尽管说～",
@@ -438,122 +471,85 @@ class Assistant:
             "嗯": "嗯嗯，我在听～",
             "哦": "怎么了？有啥事吗？",
             "啊": "咋了？遇到啥事了？",
-            "无聊": "无聊的话，可以看看书、运动一下，或者跟我聊聊天呀～",
             "开心": "开心就好！保持好心情～",
-            "难过": "怎么了？想聊聊吗？我在这里陪着你。"
+            "难过": "怎么了？想聊聊吗？我在这里陪着你。",
+            "我想死": """我真的很担心你。
+
+我知道你现在一定很难受，但请相信，再难的事情都会过去的。
+
+**可以试试这样做**:
+1. 先深呼吸几次，让自己缓一缓
+2. 找信任的人聊聊，别一个人扛着
+3. 拨打心理援助热线：400-161-9995（24 小时）
+
+你不是一个人，还有人在乎你。如果需要聊聊，我随时都在。""",
+            "不想活了": """我很担心你的状态。
+
+这种感受一定很不好受，但请给自己一个机会。
+
+**现在可以做**:
+1. 联系信任的家人或朋友
+2. 拨打心理援助热线：400-161-9995
+3. 去最近的医院心理科
+
+你很重要，这个世界需要你。""",
         }
 
-    def chat(self, query: str) -> str:
-        """通用对话 - 优先级：简单对话 > 情感 > 实用 > 逻辑推理 > 默认"""
-        
-        # 1. 简单对话
-        for key, response in self.simple_queries.items():
+        for key, response in simple_responses.items():
             if key in query:
-                return self._apply_emotion_style(response)
-        
-        # 2. 情感识别
-        emotion_result = self.emotion_engine.recognize(query)
-        
-        # 3. 实用回复（超全库）
-        practical_response = self._check_practical_query(query)
-        if practical_response:
-            return self._apply_emotion_style(practical_response)
-        
-        # 4. 逻辑推理
-        logic_result = self.logic_engine.analyze(query, {
-            "emotion": emotion_result["emotion"],
-            "intensity": emotion_result["intensity"]
-        })
-        
-        # 5. 整合回复
-        return self._integrate_response(logic_result, emotion_result, query)
-    
-    def _check_practical_query(self, query: str) -> Optional[str]:
-        """检查实用回复库"""
-        for category, data in self.practical_responses.items():
-            for keyword in data["keywords"]:
-                if keyword in query:
-                    return data["response"]
+                return response
         return None
-    
-    def _integrate_response(self, logic_result: Dict, emotion_result: Dict, 
-                           original_query: str) -> str:
-        """整合逻辑推理和情感回应"""
-        emotion = emotion_result["emotion"]
-        logic_content = logic_result.get("content", "")
-        
-        # 判断是否需要情感回应
-        if not self.emotion_engine.should_adjust_response(logic_content):
-            return logic_content
-        
-        # 获取情感回应
-        emotion_response = self.emotion_engine.respond(
-            emotion, original_query, logic_content
-        )
-        
-        # 负面情绪：先共情，再解答
-        if emotion in ["anxiety", "frustrated", "angry", "tired", "overwhelmed", "lonely"]:
-            return f"""{emotion_response}
 
----
+    def _thoughtful_response(self, query: str) -> str:
+        """通用回复 - 像人一样思考"""
+        # 根据问题长度判断
+        if len(query) < 5:
+            return f"""zhangy-chat：## 🤔 需要更多信息
 
-**关于你说的这件事**，我来帮你分析一下：
+你提到「{query}」，能再多说点吗？
 
-{logic_content}"""
-        
-        # 正面情绪：先共鸣
-        elif emotion in ["happy", "proud"]:
-            return f"""{emotion_response}
+比如：
+- 具体是什么情况？
+- 遇到了什么问题？
 
-{logic_content}"""
-        
-        else:
-            return logic_content
-    
-    def _apply_emotion_style(self, response: str) -> str:
-        """根据心情管理器调整风格"""
-        if self.mood_manager:
-            prefix = self.mood_manager.get_response_prefix()
-            suffix = self.mood_manager.get_response_suffix()
-            
-            if self.mood_manager.is_efficiency_mode():
-                response = response.split('\n\n---\n')[0]
-            
-            parts = []
-            if prefix:
-                parts.append(prefix)
-            parts.append(response)
-            if suffix:
-                parts.append(suffix)
-            
-            return "\n\n".join(parts)
-        
-        return response
-    
-    # 逻辑推理专用
-    def logic_chat(self, query: str) -> str:
-        """纯逻辑推理模式"""
-        result = self.logic_engine.analyze(query)
-        return result.get("content", "这个问题我需要更多信息才能分析。")
-    
-    # R5 深度推理模式（参考 DeepSeek-R1 理念）
-    def deep_reasoning(self, query: str) -> str:
-        """深度推理模式 - 分步推理 + 自我检查"""
-        result = self.reasoning_engine.reason(query)
-        return self.reasoning_engine.format_reasoning(result)
-    
-    # 情感管理
-    def get_emotion_status(self) -> str:
-        return self.emotion_engine.get_emotion_summary()
-    
-    def clear_emotion_memory(self) -> str:
-        return self.emotion_engine.clear_memory()
-    
-    def set_emotion_intensity(self, level: str) -> bool:
-        return self.emotion_engine.set_intensity_level(level)
-    
+说得越详细，我越能帮到你～"""
+
+        # 通用思考式回复
+        return f"""zhangy-chat：## 🤔 {self.name} 的分析
+
+关于「{query[:50]}{'...' if len(query) > 50 else ''}」，我来帮你分析一下：
+
+**分析思路**:
+1. 先明确核心问题是什么
+2. 找出关键影响因素
+3. 梳理各因素之间的关系
+
+**建议**:
+- 复杂问题拆成小问题逐个突破
+- 多问几个"为什么"找到根本原因
+- 必要时寻求专业意见
+
+你能再多说点具体情境吗？这样我能给到更有针对性的建议～"""
+
+    def _apply_mood_style(self, response: str) -> str:
+        """根据心情调整回复风格"""
+        if not self.mood_manager:
+            return response
+
+        prefix = self.mood_manager.get_response_prefix()
+        suffix = self.mood_manager.get_response_suffix()
+
+        parts = []
+        if prefix:
+            parts.append(prefix)
+        parts.append(response)
+        if suffix:
+            parts.append(suffix)
+
+        return "\n\n".join(parts)
+
     def get_daily_tip(self) -> str:
-        from datetime import datetime
+        """每日小贴士"""
         tips = [
             "今天也要记得适当休息，效率比时长更重要。",
             "完成一个小任务也是进步，为自己点赞！",
@@ -561,21 +557,21 @@ class Assistant:
             "今天的努力，是明天成功的基石。",
             "照顾好自己，才能更好地照顾他人。",
             "专注当下，不要为未发生的事过度担忧。",
-            "适当的运动可以提升心情和效率。"
+            "适当的运动可以提升心情和效率。",
         ]
         day = datetime.now().weekday()
         base_tip = tips[day % len(tips)]
-        
+
         if self.mood_manager:
             if self.mood_manager.is_empathetic_mode():
-                return f" {base_tip} 记得，你已经很好了。"
+                return f"💡 {base_tip} 记得，你已经很好了。"
             elif self.mood_manager.is_efficiency_mode():
-                return f" {base_tip} 保持专注，继续前进。"
-        
-        return f" {base_tip}"
-    
+                return f"🎯 {base_tip} 保持专注，继续前进。"
+
+        return f"💡 {base_tip}"
+
     def set_mood_manager(self, mood_manager):
         self.mood_manager = mood_manager
-    
+
     def set_preset_manager(self, preset_manager):
         self.preset_manager = preset_manager
