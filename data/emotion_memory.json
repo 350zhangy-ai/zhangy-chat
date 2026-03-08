@@ -47,8 +47,20 @@
       "intensity": 1,
       "text": "你现在的数据流？",
       "timestamp": "2026-03-07T20:49:19.797959"
+    },
+    {
+      "emotion": "neutral",
+      "intensity": 1,
+      "text": "pvp",
+      "timestamp": "2026-03-07T20:56:43.725230"
+    },
+    {
+      "emotion": "neutral",
+      "intensity": 1,
+      "text": "视频",
+      "timestamp": "2026-03-07T20:57:10.301485"
     }
   ],
   "intensity_level": "medium",
-  "last_updated": "2026-03-07T20:49:19.797969"
+  "last_updated": "2026-03-08T10:52:57.178082"
 }
