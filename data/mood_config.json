@@ -1,0 +1,15 @@
+{
+  "current_mood": "calm",
+  "mood_history": [
+    {
+      "mood": "tired",
+      "timestamp": "2026-03-08T13:08:00.427320",
+      "previous": "calm"
+    },
+    {
+      "mood": "calm",
+      "timestamp": "2026-03-08T13:08:02.178309",
+      "previous": "tired"
+    }
+  ]
+}

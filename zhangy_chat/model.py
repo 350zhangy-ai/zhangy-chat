@@ -65,8 +65,8 @@ class ZhangyChatModel:
                     
                     if self.model:
                         print("[zhangy-chat] 模型已加载")
-                        print("[zhangy-chat] 但由于模型权重与 tokenizer 不匹配，推理输出为乱码")
-                        print("[zhangy-chat] 将使用知识库模式")
+                        print("[zhangy-chat] 但由于模型权重与 tokenizer 可能不匹配，将使用知识库模式")
+                        print("[zhangy-chat] 如需使用模型推理，请确保模型权重与 tokenizer 来自同一版本")
                         self.model = None  # 禁用模型推理
                         return False
                     else:
@@ -89,7 +89,7 @@ class ZhangyChatModel:
     
     def generate(self, text: str, max_length: int = 512) -> str:
         """生成回复"""
-        # 由于模型权重与 tokenizer 不匹配，推理输出为乱码
+        # 由于模型权重与 tokenizer 可能不匹配，推理输出可能为乱码
         # 直接返回 None，使用知识库模式
         print("[zhangy-chat] 模型推理已禁用，使用知识库模式")
         return None
